@@ -1,13 +1,13 @@
 [book]
-title = "Tucano Test — Documentation"
-description = "The published site for the Tucano Test API: user wiki, engineering records, and the generated operation reference."
-authors = ["Tucano Technology"]
+title = "TatuTest — Documentation"
+description = "The published site for the TatuTest API: user wiki, engineering records, and the generated operation reference."
+authors = ["TatuHQ"]
 language = "en"
 src = "."
 
 [output.html]
-site-url = "/tucanotestapi/"
+site-url = "/tatutestapi/"
 default-theme = "light"
 preferred-dark-theme = "navy"
-git-repository-url = "https://github.com/TucanoTechnology/TucanoTestAPI"
-edit-url-template = "https://github.com/TucanoTechnology/TucanoTestAPI/edit/main/docs/{path}"
+git-repository-url = "https://github.com/TatuHQ/TatuTestAPI"
+edit-url-template = "https://github.com/TatuHQ/TatuTestAPI/edit/main/docs/{path}"

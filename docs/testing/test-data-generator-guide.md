@@ -1,6 +1,6 @@
 # Test-data generator guide
 
-`scripts/seed.mjs` is the test-data generator: it builds a complete, representative Tucano Test
+`scripts/seed.mjs` is the test-data generator: it builds a complete, representative TatuTest
 environment against a running deployment, and `scripts/teardown.mjs` is its inverse. This document is
 how to **use** it for each of its three audiences and how to **extend** it when the API gains a
 feature.
@@ -11,12 +11,12 @@ guide is the operator's and contributor's view of it. Where the two disagree, th
 and this guide is a bug.
 
 - **Generator:** [`scripts/seed.mjs`](../../scripts/seed.mjs) — issue
-  [#193](https://github.com/TucanoTechnology/TucanoTestAPI/issues/193)
+  [#193](https://github.com/TatuHQ/TatuTestAPI/issues/193)
 - **Teardown:** [`scripts/teardown.mjs`](../../scripts/teardown.mjs) — issue
-  [#194](https://github.com/TucanoTechnology/TucanoTestAPI/issues/194)
+  [#194](https://github.com/TatuHQ/TatuTestAPI/issues/194)
 - **Specification:** [seed-dataset-spec.md](seed-dataset-spec.md) — issue
-  [#192](https://github.com/TucanoTechnology/TucanoTestAPI/issues/192)
-- **Parent epic:** [#169](https://github.com/TucanoTechnology/TucanoTestAPI/issues/169)
+  [#192](https://github.com/TatuHQ/TatuTestAPI/issues/192)
+- **Parent epic:** [#169](https://github.com/TatuHQ/TatuTestAPI/issues/169)
 
 ## 1. What the generator produces
 
@@ -40,7 +40,7 @@ One run creates, over the HTTP API alone:
   suite→suite), four moves chained onto `TC-MOVE-1` so one case passes through all four move
   directions, and a no-op move of `TC-PROJECT-1`.
 
-The result is the tree of specification §2 below `TUCANO_DATA_DIR`. The two properties that matter
+The result is the tree of specification §2 below `TATU_DATA_DIR`. The two properties that matter
 for every audience below are that it is **generated, never stored** (so it cannot drift from the API)
 and that it is **scoped in both directions** (the seed refuses to overwrite its own identifiers;
 teardown removes only them).
@@ -52,10 +52,10 @@ teardown removes only them).
 Use it to get a populated deployment in one command rather than clicking through an empty GUI.
 
 ```sh
-TUCANO_AUTH_REQUIRED=true \
-TUCANO_JWT_SECRET='<at least 32 bytes>' \
-TUCANO_BOOTSTRAP_USERNAME=admin \
-TUCANO_BOOTSTRAP_PASSWORD=admin-password \
+TATU_AUTH_REQUIRED=true \
+TATU_JWT_SECRET='<at least 32 bytes>' \
+TATU_BOOTSTRAP_USERNAME=admin \
+TATU_BOOTSTRAP_PASSWORD=admin-password \
   docker compose up -d --build
 
 node scripts/seed.mjs http://localhost:3100
@@ -122,16 +122,16 @@ enforced**, because each signs in as the bootstrap account:
 
 | Variable | Used by | Purpose |
 | --- | --- | --- |
-| `TUCANO_BOOTSTRAP_USERNAME` / `TUCANO_BOOTSTRAP_PASSWORD` | both | The account each script signs in as. Required. |
-| `TUCANO_API_URL` | both | Base URL when no argument is given. The seed probes `http://localhost:3100`, `http://localhost:8080/api`, then `http://localhost:3000`; teardown probes the same list but **never guesses** — it fails when no candidate answers `/health`. |
-| `TUCANO_SEED_VIEWER_PASSWORD` | seed, validate | Password for the seeded non-administrator `viewer` account, which holds `owner` on one project. Both scripts default to `viewer-seed-password`, so the validator signs in as the account the seed wrote without further configuration. |
-| `TUCANO_SEED_EDITOR_PASSWORD` | seed, validate | The same, for the `editor` account, which holds `editor` on the same project and is what lets a client exercise a role-gated write mid-ladder. Defaults to `editor-seed-password`. |
-| `TUCANO_SEED_AUTH_CMD` | seed | Command line that seeds the `viewer` and `editor` accounts and their grants (see [§4](#4-the-auth-exception)). When unset, that step is skipped with a notice. |
-| `TUCANO_SEED_VIEWER_USERNAME` | teardown, validate | The non-administrator account to sign in as (validate) and to remove (teardown). Defaults to `viewer`, the only name the seed writes; a different name is checked against the seed's own account rather than trusted (see [§3.2](#32-removing-it-again)). |
-| `TUCANO_SEED_EDITOR_USERNAME` | teardown, validate | The same, for the `editor` account. |
-| `TUCANO_UNSEED_AUTH_CMD` | teardown | Command line that removes both accounts and their grants. When unset, that step is reported as not run and the run exits non-zero, because the accounts would otherwise survive. |
+| `TATU_BOOTSTRAP_USERNAME` / `TATU_BOOTSTRAP_PASSWORD` | both | The account each script signs in as. Required. |
+| `TATU_API_URL` | both | Base URL when no argument is given. The seed probes `http://localhost:3100`, `http://localhost:8080/api`, then `http://localhost:3000`; teardown probes the same list but **never guesses** — it fails when no candidate answers `/health`. |
+| `TATU_SEED_VIEWER_PASSWORD` | seed, validate | Password for the seeded non-administrator `viewer` account, which holds `owner` on one project. Both scripts default to `viewer-seed-password`, so the validator signs in as the account the seed wrote without further configuration. |
+| `TATU_SEED_EDITOR_PASSWORD` | seed, validate | The same, for the `editor` account, which holds `editor` on the same project and is what lets a client exercise a role-gated write mid-ladder. Defaults to `editor-seed-password`. |
+| `TATU_SEED_AUTH_CMD` | seed | Command line that seeds the `viewer` and `editor` accounts and their grants (see [§4](#4-the-auth-exception)). When unset, that step is skipped with a notice. |
+| `TATU_SEED_VIEWER_USERNAME` | teardown, validate | The non-administrator account to sign in as (validate) and to remove (teardown). Defaults to `viewer`, the only name the seed writes; a different name is checked against the seed's own account rather than trusted (see [§3.2](#32-removing-it-again)). |
+| `TATU_SEED_EDITOR_USERNAME` | teardown, validate | The same, for the `editor` account. |
+| `TATU_UNSEED_AUTH_CMD` | teardown | Command line that removes both accounts and their grants. When unset, that step is reported as not run and the run exits non-zero, because the accounts would otherwise survive. |
 
-`TUCANO_AUTH_REQUIRED`, `TUCANO_JWT_SECRET` (or `TUCANO_JWT_SECRET_FILE`) and the two bootstrap
+`TATU_AUTH_REQUIRED`, `TATU_JWT_SECRET` (or `TATU_JWT_SECRET_FILE`) and the two bootstrap
 settings are the deployment's, not the scripts': with auth off there is no token to obtain and
 `POST /auth/login` answers `storage_error`, so a seed run against a misconfigured deployment fails
 loudly at step 0. The full settings contract is in the [repository
@@ -155,8 +155,8 @@ node scripts/seed.mjs       # then seed again
 and nothing else.
 
 ```sh
-TUCANO_BOOTSTRAP_USERNAME=admin \
-TUCANO_BOOTSTRAP_PASSWORD=admin-password \
+TATU_BOOTSTRAP_USERNAME=admin \
+TATU_BOOTSTRAP_PASSWORD=admin-password \
   node scripts/teardown.mjs http://localhost:3000
 ```
 
@@ -165,7 +165,7 @@ not be resolved, naming each item it left in place and why. Re-running it over a
 is a success: a missing entity is a settled teardown, not a failure.
 
 A missing entity settles the run only when the teardown was pointed at the right entity. The auth step
-removes the account named by `TUCANO_SEED_VIEWER_USERNAME` / `TUCANO_SEED_EDITOR_USERNAME`, while the
+removes the account named by `TATU_SEED_VIEWER_USERNAME` / `TATU_SEED_EDITOR_USERNAME`, while the
 seed always writes `viewer` and `editor`; a name that is absent therefore says nothing about whether
 the account the seed wrote is still there. The teardown therefore always asks the server binary
 read-only (`unseed-auth --check`) — whichever name it was configured with — and treats two things it
@@ -192,45 +192,45 @@ exposes two subcommands that write through the same `AuthStore` the running serv
 
 ```sh
 # the seed's half: create the accounts and their grants (idempotent)
-TUCANO_DATA_DIR=/data ./tucano-test seed-auth \
+TATU_DATA_DIR=/data ./tatu-test seed-auth \
     --username viewer --password viewer-password \
     --grant checkout.json=owner
 
-TUCANO_DATA_DIR=/data ./tucano-test seed-auth \
+TATU_DATA_DIR=/data ./tatu-test seed-auth \
     --username editor --password editor-password \
     --grant checkout.json=editor
 
 # the teardown's half: forget the accounts and the grants they hold on the named projects
-TUCANO_DATA_DIR=/data ./tucano-test unseed-auth \
+TATU_DATA_DIR=/data ./tatu-test unseed-auth \
     --username viewer --grant checkout.json
 
-TUCANO_DATA_DIR=/data ./tucano-test unseed-auth \
+TATU_DATA_DIR=/data ./tatu-test unseed-auth \
     --username editor --grant checkout.json
 
 # the read-only half: report where the account and the named grant stand, and write nothing
-TUCANO_DATA_DIR=/data ./tucano-test unseed-auth \
+TATU_DATA_DIR=/data ./tatu-test unseed-auth \
     --username viewer --grant checkout.json --check
 ```
 
-The scripts invoke them through `TUCANO_SEED_AUTH_CMD` and `TUCANO_UNSEED_AUTH_CMD`, so each takes the
+The scripts invoke them through `TATU_SEED_AUTH_CMD` and `TATU_UNSEED_AUTH_CMD`, so each takes the
 form of a command *line* rather than a binary path. Against the Compose volume:
 
 ```sh
-TUCANO_SEED_AUTH_CMD='docker compose exec -T api tucano-test seed-auth' \
-TUCANO_SEED_VIEWER_PASSWORD=viewer-password \
-TUCANO_SEED_EDITOR_PASSWORD=editor-password \
+TATU_SEED_AUTH_CMD='docker compose exec -T api tatu-test seed-auth' \
+TATU_SEED_VIEWER_PASSWORD=viewer-password \
+TATU_SEED_EDITOR_PASSWORD=editor-password \
   node scripts/seed.mjs http://localhost:3000
 
-TUCANO_UNSEED_AUTH_CMD='docker compose exec -T api tucano-test unseed-auth' \
+TATU_UNSEED_AUTH_CMD='docker compose exec -T api tatu-test unseed-auth' \
   node scripts/teardown.mjs http://localhost:3000
 ```
 
 Against a server running on the host instead, the command line has to carry the same
-`TUCANO_DATA_DIR` the server was given, because the subcommand is a second process that resolves the
+`TATU_DATA_DIR` the server was given, because the subcommand is a second process that resolves the
 directory on its own:
 
 ```sh
-TUCANO_SEED_AUTH_CMD='TUCANO_DATA_DIR=/tmp/tucano-data ./target/debug/tucano-test seed-auth' \
+TATU_SEED_AUTH_CMD='TATU_DATA_DIR=/tmp/tatu-data ./target/debug/tatu-test seed-auth' \
   node scripts/seed.mjs http://127.0.0.1:3000
 ```
 
@@ -253,7 +253,7 @@ Three properties keep this exception honest:
   all, because `POST /auth/login` answers `401` for a missing account and for a wrong password alike,
   and every other route a caller could try either needs a session or has to know the account id it
   does not have. It writes no state, though opening the store still creates `auth/`,
-  `auth/projects/` and an empty `.tucano.lock`, even on a pristine data directory.
+  `auth/projects/` and an empty `.tatu.lock`, even on a pristine data directory.
 - **`GET /auth/me` closes the loop.** After seeding, the script signs in as each seeded account and
   asserts the API reports no system-administrator flag and, on the granted project alone, exactly the
   role that account was given — `owner` for `viewer`, `editor` for `editor`, with no role recorded
@@ -325,7 +325,7 @@ copy there.
 
 The assertions of specification §3 step 12 live in
 [`scripts/validate-seed.mjs`](../../scripts/validate-seed.mjs) (issue
-[#195](https://github.com/TucanoTechnology/TucanoTestAPI/issues/195)), which runs against a seeded
+[#195](https://github.com/TatuHQ/TatuTestAPI/issues/195)), which runs against a seeded
 deployment rather than inside the generator, so the seed never validates its own work. A feature the
 seeded dataset must expose also belongs in that script: without an assertion the new row passes over
 a deployment that no longer has the feature.

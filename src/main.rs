@@ -2,9 +2,9 @@ use std::io::IsTerminal;
 use std::process::ExitCode;
 use std::time::Duration;
 
+use tatu_test::{api, auth, config, repository};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt;
-use tucano_test::{api, auth, config, repository};
 
 /// Serves the API, or runs one of the two auth subcommands.
 ///
@@ -20,7 +20,7 @@ async fn main() -> ExitCode {
     match run().await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("tucano-test: {error}");
+            eprintln!("tatu-test: {error}");
             ExitCode::FAILURE
         }
     }
@@ -55,7 +55,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // The optional file is read once, here, before the listener binds: the ADR
     // puts it in the same class as the environment, resolved at startup into an
     // immutable value, so a bad one is a startup failure rather than a request
-    // failure. No `TUCANO_CONFIG_FILE` means no file, which is the pre-file
+    // failure. No `TATU_CONFIG_FILE` means no file, which is the pre-file
     // behaviour of every deployment that predates this module.
     let file = config::load_from_env()?;
 
@@ -80,13 +80,13 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // directory is operator-facing information at this point already — a
     // configuration refusal has always printed it.
     tracing::info!(
-        target: "tucano.boot",
+        target: "tatu.boot",
         version = env!("CARGO_PKG_VERSION"),
-        build = env!("TUCANO_BUILD"),
-        toolchain = %env!("TUCANO_TOOLCHAIN"),
+        build = env!("TATU_BUILD"),
+        toolchain = %env!("TATU_TOOLCHAIN"),
         data_dir = %data_dir.display(),
         auth_required = auth_config.required,
-        "tucano-test is starting"
+        "tatu-test is starting"
     );
     let store = auth::AuthStore::new(&data_dir)
         .map_err(startup_failure(
@@ -161,11 +161,11 @@ async fn shutdown_signal() {
 /// The data directory the server would use, so `seed-auth` writes where the
 /// server reads.
 ///
-/// `TUCANO_DATA_DIR` stays environment-only: it decides where the data volume
+/// `TATU_DATA_DIR` stays environment-only: it decides where the data volume
 /// is, and the orchestrator must be able to set it before anything else —
 /// including the configuration file — can be located.
 fn data_dir() -> std::path::PathBuf {
-    std::env::var_os("TUCANO_DATA_DIR")
+    std::env::var_os("TATU_DATA_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::PathBuf::from("data"))
 }
@@ -178,17 +178,17 @@ fn port() -> String {
 }
 
 /// The millisecond count a write waits for the advisory lock by default, so an
-/// unset `TUCANO_LOCK_TIMEOUT_MS` and one declared with no value agree.
+/// unset `TATU_LOCK_TIMEOUT_MS` and one declared with no value agree.
 const DEFAULT_LOCK_TIMEOUT_MS: u64 = 5000;
 
 /// How long the advisory lock may be waited on before a write is refused with
 /// a 503. Environment-only like [`data_dir`] and [`port`]: the orchestrator
 /// owns it, and it must be known before anything touches the data directory.
 ///
-/// Defaults to 5 000 ms when `TUCANO_LOCK_TIMEOUT_MS` is unset or empty; a
+/// Defaults to 5 000 ms when `TATU_LOCK_TIMEOUT_MS` is unset or empty; a
 /// non-numeric value is a startup error.
 fn lock_timeout() -> Duration {
-    lock_timeout_from(std::env::var("TUCANO_LOCK_TIMEOUT_MS").ok().as_deref())
+    lock_timeout_from(std::env::var("TATU_LOCK_TIMEOUT_MS").ok().as_deref())
 }
 
 /// Reads the timeout from the raw environment value, so the parse is testable
@@ -205,16 +205,16 @@ fn lock_timeout_from(raw: Option<&str>) -> Duration {
     };
     let millis: u64 = raw
         .parse()
-        .unwrap_or_else(|_| panic!("TUCANO_LOCK_TIMEOUT_MS is not a valid u64: {raw:?}"));
+        .unwrap_or_else(|_| panic!("TATU_LOCK_TIMEOUT_MS is not a valid u64: {raw:?}"));
     Duration::from_millis(millis)
 }
 
 /// Largest accepted request body, environment-only like the other startup
-/// bounds. `TUCANO_MAX_BODY_BYTES`, default 50 MiB (`api::MAX_BODY_BYTES`);
+/// bounds. `TATU_MAX_BODY_BYTES`, default 50 MiB (`api::MAX_BODY_BYTES`);
 /// unset or empty keeps the default, a non-numeric or zero value is a startup
 /// refusal rather than a silently unbounded or unusable server (#103).
 fn max_body_bytes() -> usize {
-    max_body_bytes_from(std::env::var("TUCANO_MAX_BODY_BYTES").ok().as_deref())
+    max_body_bytes_from(std::env::var("TATU_MAX_BODY_BYTES").ok().as_deref())
 }
 
 fn max_body_bytes_from(raw: Option<&str>) -> usize {
@@ -223,21 +223,21 @@ fn max_body_bytes_from(raw: Option<&str>) -> usize {
     };
     let bytes: u64 = raw
         .parse()
-        .unwrap_or_else(|_| panic!("TUCANO_MAX_BODY_BYTES is not a valid u64: {raw:?}"));
+        .unwrap_or_else(|_| panic!("TATU_MAX_BODY_BYTES is not a valid u64: {raw:?}"));
     assert!(
         bytes > 0,
-        "TUCANO_MAX_BODY_BYTES must be a positive byte count"
+        "TATU_MAX_BODY_BYTES must be a positive byte count"
     );
     bytes as usize
 }
 
 /// How long a request may run before the guardrail cuts it off with a 504.
-/// `TUCANO_REQUEST_TIMEOUT_MS`, default 300 000 (five minutes); an explicit
+/// `TATU_REQUEST_TIMEOUT_MS`, default 300 000 (five minutes); an explicit
 /// `0` disables the timeout for operators who say so on purpose. Unset or
 /// empty keeps the default; a non-numeric value is a startup refusal, exactly
 /// like the lock timeout's (#103).
 fn request_timeout() -> Option<Duration> {
-    request_timeout_from(std::env::var("TUCANO_REQUEST_TIMEOUT_MS").ok().as_deref())
+    request_timeout_from(std::env::var("TATU_REQUEST_TIMEOUT_MS").ok().as_deref())
 }
 
 fn request_timeout_from(raw: Option<&str>) -> Option<Duration> {
@@ -248,16 +248,16 @@ fn request_timeout_from(raw: Option<&str>) -> Option<Duration> {
     };
     let millis: u64 = raw
         .parse()
-        .unwrap_or_else(|_| panic!("TUCANO_REQUEST_TIMEOUT_MS is not a valid u64: {raw:?}"));
+        .unwrap_or_else(|_| panic!("TATU_REQUEST_TIMEOUT_MS is not a valid u64: {raw:?}"));
     (millis > 0).then(|| Duration::from_millis(millis))
 }
 
 /// How many requests may be in flight before new ones are refused with a 503
-/// and a `Retry-After`. `TUCANO_MAX_CONCURRENCY`, default 128; an explicit
+/// and a `Retry-After`. `TATU_MAX_CONCURRENCY`, default 128; an explicit
 /// `0` removes the cap. Unset or empty keeps the default; a non-numeric value
 /// is a startup refusal (#103).
 fn max_concurrency() -> Option<usize> {
-    max_concurrency_from(std::env::var("TUCANO_MAX_CONCURRENCY").ok().as_deref())
+    max_concurrency_from(std::env::var("TATU_MAX_CONCURRENCY").ok().as_deref())
 }
 
 fn max_concurrency_from(raw: Option<&str>) -> Option<usize> {
@@ -266,13 +266,13 @@ fn max_concurrency_from(raw: Option<&str>) -> Option<usize> {
     };
     let cap: u64 = raw
         .parse()
-        .unwrap_or_else(|_| panic!("TUCANO_MAX_CONCURRENCY is not a valid u64: {raw:?}"));
+        .unwrap_or_else(|_| panic!("TATU_MAX_CONCURRENCY is not a valid u64: {raw:?}"));
     (cap > 0).then_some(cap as usize)
 }
 
 /// Render an io failure during startup with the two facts an operator can act
 /// on: which directory the process was reaching for, and which uid it was
-/// doing it as (#355). The container ships `USER tucano` (uid 10001) against a
+/// doing it as (#355). The container ships `USER tatu` (uid 10001) against a
 /// bind-mounted `/data`, so ownership of the host directory is the overwhelmingly
 /// likely cause; the raw io error is kept last so the OS text survives.
 fn startup_failure(
@@ -301,7 +301,7 @@ fn current_uid() -> u32 {
     0
 }
 
-/// The directive set an unset, empty or blank `TUCANO_LOG` resolves to.
+/// The directive set an unset, empty or blank `TATU_LOG` resolves to.
 ///
 /// `info` announces the request spans, the audit lines and the failures without
 /// the per-connection noise `debug` adds, which is the level a deployment that
@@ -321,14 +321,14 @@ enum LogFormat {
 /// written to.
 ///
 /// Two environment variables configure it, both resolved once at startup so a
-/// bad one stops the server rather than a request: `TUCANO_LOG` is a
+/// bad one stops the server rather than a request: `TATU_LOG` is a
 /// `tracing-subscriber` directive set (defaulting to [`DEFAULT_LOG_FILTER`]),
-/// and `TUCANO_LOG_FORMAT` is `compact` (the default) or `json`. Colour is
+/// and `TATU_LOG_FORMAT` is `compact` (the default) or `json`. Colour is
 /// enabled on stdout only when stdout is a terminal, so a captured log never
 /// carries escape sequences.
 fn install_subscriber() {
-    let filter = log_filter_from(std::env::var("TUCANO_LOG").ok().as_deref());
-    match log_format_from(std::env::var("TUCANO_LOG_FORMAT").ok().as_deref()) {
+    let filter = log_filter_from(std::env::var("TATU_LOG").ok().as_deref());
+    match log_format_from(std::env::var("TATU_LOG_FORMAT").ok().as_deref()) {
         LogFormat::Compact => fmt()
             .with_env_filter(filter)
             .with_ansi(std::io::stdout().is_terminal())
@@ -349,7 +349,7 @@ fn log_filter_from(raw: Option<&str>) -> EnvFilter {
         .filter(|raw| !raw.is_empty())
         .unwrap_or(DEFAULT_LOG_FILTER);
     EnvFilter::try_new(directives).unwrap_or_else(|error| {
-        panic!("TUCANO_LOG is not a valid filter directive set: {directives:?} ({error})")
+        panic!("TATU_LOG is not a valid filter directive set: {directives:?} ({error})")
     })
 }
 
@@ -363,7 +363,7 @@ fn log_format_from(raw: Option<&str>) -> LogFormat {
         None | Some("compact") => LogFormat::Compact,
         Some("json") => LogFormat::Json,
         Some(other) => {
-            panic!("TUCANO_LOG_FORMAT is neither `compact` nor `json`: {other:?}")
+            panic!("TATU_LOG_FORMAT is neither `compact` nor `json`: {other:?}")
         }
     }
 }
@@ -377,7 +377,7 @@ fn log_format_from(raw: Option<&str>) -> LogFormat {
 /// missing are added.
 ///
 /// ```text
-/// tucano-test seed-auth --username viewer --password <password> \
+/// tatu-test seed-auth --username viewer --password <password> \
 ///     --grant checkout.json=owner
 /// ```
 fn seed_auth(args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
@@ -457,10 +457,10 @@ fn seed_auth(args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
 /// documented pair of auth subcommands stays a pair.
 ///
 /// ```text
-/// tucano-test unseed-auth --username viewer \
+/// tatu-test unseed-auth --username viewer \
 ///     --grant checkout.json
 ///
-/// tucano-test unseed-auth --username viewer \
+/// tatu-test unseed-auth --username viewer \
 ///     --grant checkout.json --check
 /// ```
 fn unseed_auth(args: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
@@ -665,25 +665,25 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "TUCANO_MAX_BODY_BYTES is not a valid u64")]
+    #[should_panic(expected = "TATU_MAX_BODY_BYTES is not a valid u64")]
     fn a_non_numeric_body_cap_stops_startup() {
         max_body_bytes_from(Some("huge"));
     }
 
     #[test]
-    #[should_panic(expected = "TUCANO_MAX_BODY_BYTES must be a positive byte count")]
+    #[should_panic(expected = "TATU_MAX_BODY_BYTES must be a positive byte count")]
     fn a_zero_body_cap_is_refused_not_literal() {
         max_body_bytes_from(Some("0"));
     }
 
     #[test]
-    #[should_panic(expected = "TUCANO_REQUEST_TIMEOUT_MS is not a valid u64")]
+    #[should_panic(expected = "TATU_REQUEST_TIMEOUT_MS is not a valid u64")]
     fn a_non_numeric_timeout_stops_startup() {
         request_timeout_from(Some("soon"));
     }
 
     #[test]
-    #[should_panic(expected = "TUCANO_MAX_CONCURRENCY is not a valid u64")]
+    #[should_panic(expected = "TATU_MAX_CONCURRENCY is not a valid u64")]
     fn a_non_numeric_concurrency_cap_stops_startup() {
         max_concurrency_from(Some("plenty"));
     }
@@ -692,8 +692,8 @@ mod tests {
     fn a_startup_io_failure_names_the_path_and_the_uid() {
         let error = std::io::Error::from(std::io::ErrorKind::PermissionDenied);
         let message =
-            startup_failure("prepare the data directory", "/srv/tucano/data")(error).to_string();
-        assert!(message.contains("/srv/tucano/data"), "{message}");
+            startup_failure("prepare the data directory", "/srv/tatu/data")(error).to_string();
+        assert!(message.contains("/srv/tatu/data"), "{message}");
         assert!(message.contains("uid"), "{message}");
         assert!(
             message.to_lowercase().contains("permission denied"),
@@ -703,7 +703,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "TUCANO_LOCK_TIMEOUT_MS is not a valid u64")]
+    #[should_panic(expected = "TATU_LOCK_TIMEOUT_MS is not a valid u64")]
     fn a_non_numeric_lock_timeout_stops_startup() {
         lock_timeout_from(Some("soon"));
     }
@@ -712,8 +712,8 @@ mod tests {
     fn a_log_filter_is_read_from_the_value() {
         assert_eq!(log_filter_from(Some("warn")).to_string(), "warn");
         assert_eq!(
-            log_filter_from(Some("tucano_test=debug,tower_http=warn")).to_string(),
-            "tucano_test=debug,tower_http=warn"
+            log_filter_from(Some("tatu_test=debug,tower_http=warn")).to_string(),
+            "tower_http=warn,tatu_test=debug"
         );
     }
 
@@ -729,7 +729,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "TUCANO_LOG is not a valid filter directive set")]
+    #[should_panic(expected = "TATU_LOG is not a valid filter directive set")]
     fn an_unparseable_log_filter_stops_startup() {
         log_filter_from(Some("info=debug=oops"));
     }
@@ -748,7 +748,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "TUCANO_LOG_FORMAT is neither `compact` nor `json`")]
+    #[should_panic(expected = "TATU_LOG_FORMAT is neither `compact` nor `json`")]
     fn an_unknown_log_format_stops_startup() {
         log_format_from(Some("yaml"));
     }

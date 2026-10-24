@@ -1,8 +1,8 @@
 # Performance Baseline
 
-This document records the Criterion benchmark baseline for the Tucano Test
+This document records the Criterion benchmark baseline for the TatuTest
 API domain layer. The harness lives in `benches/crud.rs` and is introduced
-by [#97](https://github.com/TucanoTechnology/TucanoTestAPI/issues/97); it
+by [#97](https://github.com/TatuHQ/TatuTestAPI/issues/97); it
 is the single source of truth for the measurements below, and the
 comparisons that future storage or domain work is judged against.
 

@@ -21,9 +21,9 @@ use common::{documented_operations, get, send_json, test_app};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use std::path::Path;
+use tatu_test::auth::{AuthConfig, AuthStore, Role, User, hash_password};
+use tatu_test::{api, repository::FileRepository};
 use tower::ServiceExt;
-use tucano_test::auth::{AuthConfig, AuthStore, Role, User, hash_password};
-use tucano_test::{api, repository::FileRepository};
 
 const SECRET: &[u8] = b"an-integration-test-secret-of-32-plus!";
 const PASSWORD: &str = "correct horse battery staple";

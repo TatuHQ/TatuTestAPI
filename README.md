@@ -1,17 +1,17 @@
-# Tucano Test API
+# TatuTest API
 
-[![Workflows](https://github.com/TucanoTechnology/TucanoTestAPI/actions/workflows/lint.yml/badge.svg?branch=main&event=push&job=workflows)](https://github.com/TucanoTechnology/TucanoTestAPI/actions/workflows/lint.yml)
+[![Workflows](https://github.com/TatuHQ/TatuTestAPI/actions/workflows/lint.yml/badge.svg?branch=main&event=push&job=workflows)](https://github.com/TatuHQ/TatuTestAPI/actions/workflows/lint.yml)
 
 
-[![Docs](https://github.com/TucanoTechnology/TucanoTestAPI/actions/workflows/docs.yml/badge.svg?branch=main&event=push&job=validate)](https://github.com/TucanoTechnology/TucanoTestAPI/actions/workflows/docs.yml)
+[![Docs](https://github.com/TatuHQ/TatuTestAPI/actions/workflows/docs.yml/badge.svg?branch=main&event=push&job=validate)](https://github.com/TatuHQ/TatuTestAPI/actions/workflows/docs.yml)
 
-[![Rustdoc](https://github.com/TucanoTechnology/TucanoTestAPI/actions/workflows/build-test.yml/badge.svg?branch=main&event=push&job=rustdoc)](https://github.com/TucanoTechnology/TucanoTestAPI/actions/workflows/build-test.yml)
+[![Rustdoc](https://github.com/TatuHQ/TatuTestAPI/actions/workflows/build-test.yml/badge.svg?branch=main&event=push&job=rustdoc)](https://github.com/TatuHQ/TatuTestAPI/actions/workflows/build-test.yml)
 
-[![Audit](https://github.com/TucanoTechnology/TucanoTestAPI/actions/workflows/security.yml/badge.svg?branch=main&event=push&job=audit)](https://github.com/TucanoTechnology/TucanoTestAPI/actions/workflows/security.yml)
+[![Audit](https://github.com/TatuHQ/TatuTestAPI/actions/workflows/security.yml/badge.svg?branch=main&event=push&job=audit)](https://github.com/TatuHQ/TatuTestAPI/actions/workflows/security.yml)
 
-[![Release](https://github.com/TucanoTechnology/TucanoTestAPI/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/TucanoTechnology/TucanoTestAPI/actions/workflows/release.yml)
+[![Release](https://github.com/TatuHQ/TatuTestAPI/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/TatuHQ/TatuTestAPI/actions/workflows/release.yml)
 
-The Tucano Test API is the file-based test case management service for TucanoTCM: a Rust service
+The TatuTest API is the file-based test case management service for TatuTest: a Rust service
 built on Axum that stores projects, suites, cases, runs, milestones, and configurations as JSON
 documents on disk — no database — and exposes every operation through the documented HTTP contract
 in [openapi.json](openapi.json).
@@ -22,6 +22,33 @@ in [openapi.json](openapi.json).
 
 This README is the quick-start: clone, build, run, authenticate, call. Everything else
 lives in the documentation tree linked at the bottom.
+
+## Renamed from TucanoTest (1.1.0)
+
+The project is now **TatuTest**, published by [TatuHQ](https://github.com/TatuHQ). Stored
+documents are unchanged — the JSON layout, field names and the HTTP contract are the same —
+but deployment names are not. This release is deliberately a clean break, with no `TUCANO_*`
+fallback.
+
+| Before | After |
+| --- | --- |
+| `TucanoTestAPI` / `tucano-test` | `TatuTestAPI` / `tatu-test` |
+| `ghcr.io/tucanotechnology/tucanotestapi` | `ghcr.io/tatuhq/tatutestapi` |
+| `tucano-test-api:local`, `tucano-test-gui:local` | `tatu-test-api:local`, `tatu-test-gui:local` |
+| Every `TUCANO_*` environment variable | The same name with `TATU_*` (for example `TATU_DATA_DIR`, `TATU_JWT_SECRET`, `TATU_BOOTSTRAP_PASSWORD`, `TATU_MAX_BODY_BYTES`) |
+| Sibling `../TucanoTestGUI` checkout | Sibling `../TatuTestGUI` checkout |
+
+To carry an existing deployment over:
+
+1. Stop the old stack and keep a copy of the data directory.
+2. Point `TATU_DATA_DIR` at the existing data, or copy it into the new volume. The documents
+   need no conversion.
+3. Rename every `TUCANO_*` variable in the Compose file, `.env` or service definition to
+   `TATU_*`, including the required `TATU_JWT_SECRET` and `TATU_BOOTSTRAP_PASSWORD`.
+4. Rebuild or pull `ghcr.io/tatuhq/tatutestapi`, and update the GUI's `TATU_API_URL`.
+
+The seed and demo scripts use the same rename (`TATU_SEED_VIEWER_PASSWORD`,
+`TATU_SEED_AUTH_CMD`, and so on).
 
 ## Prerequisites
 
@@ -48,23 +75,23 @@ docker run --rm -v "$PWD":/workspace -w /workspace rust:1.98.0-bookworm cargo te
 
 ```sh
 cp .env.example .env
-# set TUCANO_JWT_SECRET (>= 32 bytes) and TUCANO_BOOTSTRAP_PASSWORD, then:
+# set TATU_JWT_SECRET (>= 32 bytes) and TATU_BOOTSTRAP_PASSWORD, then:
 docker compose up -d --build api
 ```
 
 `node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("base64url"))'`
 makes a good signing secret. Compose refuses to start while either required value is unset — it
 never silently falls back to an anonymous stack. The compose stack's `gui` service builds from a
-sibling `../TucanoTestGUI` checkout; `up ... api` alone needs neither it nor a browser.
+sibling `../TatuTestGUI` checkout; `up ... api` alone needs neither it nor a browser.
 
 **From source (no Docker):**
 
 ```sh
 cargo build --release
-TUCANO_AUTH_REQUIRED=false ./target/release/tucano-test   # anonymous, single-user machine only
+TATU_AUTH_REQUIRED=false ./target/release/tatu-test   # anonymous, single-user machine only
 ```
 
-`TUCANO_AUTH_REQUIRED=false` is the service default: every guard returns and no token is asked.
+`TATU_AUTH_REQUIRED=false` is the service default: every guard returns and no token is asked.
 The API binds every interface, so only do this on a machine nothing else can reach — otherwise keep
 authentication on (or restrict Compose to `127.0.0.1:3100:3000`). The container writes only under
 its data volume (`/data`, from `./data` under Compose; create it owned by uid `10001`, since
@@ -79,10 +106,10 @@ What runs where:
 | Service | Host port | Container port | Notes |
 | --- | --- | --- | --- |
 | `api` | `3100` | `3000` | this repository's `Dockerfile` |
-| `gui` | `8080` | `8080` | sibling `../TucanoTestGUI` checkout |
+| `gui` | `8080` | `8080` | sibling `../TatuTestGUI` checkout |
 
-The four request-ceiling knobs (`TUCANO_MAX_BODY_BYTES` 50 MiB, `TUCANO_REQUEST_TIMEOUT_MS` 300000,
-`TUCANO_MAX_CONCURRENCY` 128, `TUCANO_LOCK_TIMEOUT_MS` 5000) validate at startup and refuse a
+The four request-ceiling knobs (`TATU_MAX_BODY_BYTES` 50 MiB, `TATU_REQUEST_TIMEOUT_MS` 300000,
+`TATU_MAX_CONCURRENCY` 128, `TATU_LOCK_TIMEOUT_MS` 5000) validate at startup and refuse a
 nonsense boot loudly rather than fail requests late; see the
 [configuration reference](docs/deployment/configuration-reference.md). Before `docker compose up
 --build` a second time, pin the running image id — local tags are overwritten by every rebuild; the
@@ -95,11 +122,11 @@ project-granted role (`viewer` / `editor` / `owner`) or a system administrator:
 
 ```sh
 TOKEN=$(curl -s http://localhost:3100/auth/login -H 'content-type: application/json' \
-  -d '{"username":"admin","password":"<TUCANO_BOOTSTRAP_PASSWORD from .env>"}' | jq -r .accessToken)
+  -d '{"username":"admin","password":"<TATU_BOOTSTRAP_PASSWORD from .env>"}' | jq -r .accessToken)
 curl -s http://localhost:3100/projects -H "authorization: Bearer $TOKEN"
 ```
 
-Accounts and grants are provisioned out of band below `TUCANO_DATA_DIR/auth/` (the
+Accounts and grants are provisioned out of band below `TATU_DATA_DIR/auth/` (the
 binary's `seed-auth` subcommand writes a demo account); sign-ins, rotation and logout are
 audited, and a refresh token is exchanged once. The role model, the session contract and every error code are in the
 [API and authentication quickstart](docs/wiki/api-and-authentication.md) and the

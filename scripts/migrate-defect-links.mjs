@@ -3,14 +3,14 @@
 // the cases they describe, through the public API — the server never rewrites
 // a stored document for this, so an operator runs this once after upgrading.
 //
-//   TUCANO_API_URL=http://localhost:3000 \
-//   TUCANO_ADMIN_USER=admin TUCANO_ADMIN_PASSWORD=... \
+//   TATU_API_URL=http://localhost:3000 \
+//   TATU_ADMIN_USER=admin TATU_ADMIN_PASSWORD=... \
 //   node scripts/migrate-defect-links.mjs [--apply]
 //
 // Without --apply the script only reports what it would move. A link whose
 // case the deployment no longer holds anywhere is reported as unmovable: a
 // phantom snapshot cannot own a link.
-const BASE = process.env.TUCANO_API_URL ?? "http://localhost:3000";
+const BASE = process.env.TATU_API_URL ?? "http://localhost:3000";
 const APPLY = process.argv.includes("--apply");
 
 const session = await (
@@ -18,12 +18,12 @@ const session = await (
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      username: process.env.TUCANO_ADMIN_USER ?? "admin",
-      password: process.env.TUCANO_ADMIN_PASSWORD ?? "",
+      username: process.env.TATU_ADMIN_USER ?? "admin",
+      password: process.env.TATU_ADMIN_PASSWORD ?? "",
     }),
   })
 ).json();
-if (!session.accessToken) throw new Error("sign-in failed; set TUCANO_ADMIN_USER/TUCANO_ADMIN_PASSWORD");
+if (!session.accessToken) throw new Error("sign-in failed; set TATU_ADMIN_USER/TATU_ADMIN_PASSWORD");
 const auth = { authorization: `Bearer ${session.accessToken}`, "content-type": "application/json" };
 const get = async (uri) => (await fetch(`${BASE}${uri}`, { headers: auth })).json();
 

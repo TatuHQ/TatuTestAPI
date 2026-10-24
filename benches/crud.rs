@@ -1,4 +1,4 @@
-//! Criterion benchmarks for the Tucano Test API domain layer.
+//! Criterion benchmarks for the TatuTest API domain layer.
 //!
 //! Each benchmark talks directly to [`TestService`] (backed by a
 //! [`FileRepository`]) so it measures the work the API actually does — JSON
@@ -43,9 +43,9 @@
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use serde_json::{Value, json};
+use tatu_test::domain::{ListQuery, TestService, validation};
+use tatu_test::storage::{FileRepository, Parent, Resource};
 use tempfile::TempDir;
-use tucano_test::domain::{ListQuery, TestService, validation};
-use tucano_test::storage::{FileRepository, Parent, Resource};
 
 /// Upper bound on how many seeded items a workload creates before the timer
 /// starts. Picked to be large enough that list workloads exercise the folder
@@ -374,7 +374,7 @@ fn bench_summary_report(criterion: &mut Criterion) {
             )
             .expect("seed run");
     }
-    let filters = tucano_test::domain::reports::SummaryFilters::default();
+    let filters = tatu_test::domain::reports::SummaryFilters::default();
     criterion.bench_function("summary_report", |bencher| {
         bencher.iter(|| service.summary_report(&filters, None).expect("summary"))
     });

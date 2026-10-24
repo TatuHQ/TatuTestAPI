@@ -2,7 +2,7 @@
 
 The data volume is the deployment's only state (see
 [deployment-guide.md](deployment-guide.md)): everything the service knows — projects, suites, cases,
-runs, milestones, configurations, attachments, and the auth store — lives under `TUCANO_DATA_DIR`
+runs, milestones, configurations, attachments, and the auth store — lives under `TATU_DATA_DIR`
 as plain JSON and files. This runbook is the procedure to keep a copy of it **off the machine that
 serves it**, and to prove that copy restores. Epic #166's mirror boundary (#186's *external mirror*
 row) is what this documents; the in-cluster options it does not cover are in
@@ -32,12 +32,12 @@ row) is what this documents; the in-cluster options it does not cover are in
 
 - Off-box destination reachable over SSH, with roughly 2× the volume's size free per retained
   generation.
-- `TUCANO_JWT_SECRET` (and any other secret values) stored **separately from both copies** — the
+- `TATU_JWT_SECRET` (and any other secret values) stored **separately from both copies** — the
   volume holds only Argon2id password hashes and refresh-token digests (invariant 7 of the
   [threat model](../security/threat-model.md)), and a restore signed with a different secret
   invalidates live tokens; account passwords still authenticate because the hashes are in the
   copy.
-- The image you will restore *with*: any `tucano-test-api` release tag or pinned image id, per
+- The image you will restore *with*: any `tatu-test-api` release tag or pinned image id, per
   [canary-validation-and-rollback.md](canary-validation-and-rollback.md). The data format is what
   makes old-new combinations safe (`formatVersion`,
   [file-format-versioning-plan.md](../contracts/file-format-versioning-plan.md)).
@@ -50,18 +50,18 @@ maintenance slot, or the last pass of a blue/green swap):
 ```bash
 # with the API's write traffic stopped (compose down, or every replica stopped —
 # one service still holding the advisory lock still means writes can land)
-tar -C /srv/tucano/data -cf - . | ssh backup@offbox 'cat > /backups/tucano/gold-$(date -u +%Y%m%dT%H%M%SZ).tar'
-ssh backup@offbox 'gzip /backups/tucano/gold-<stamp>.tar && zcat /backups/tucano/gold-<stamp>.tar.gz | tar -t >/dev/null && echo archive-ok'
+tar -C /srv/tatu/data -cf - . | ssh backup@offbox 'cat > /backups/tatu/gold-$(date -u +%Y%m%dT%H%M%SZ).tar'
+ssh backup@offbox 'gzip /backups/tatu/gold-<stamp>.tar && zcat /backups/tatu/gold-<stamp>.tar.gz | tar -t >/dev/null && echo archive-ok'
 ```
 
 `tar` streams the tree as it exists at read time — hence the quiet-window requirement for the
-point-in-time property. The `.tucano.lock` file may or may not be present; it is advisory, empty,
+point-in-time property. The `.tatu.lock` file may or may not be present; it is advisory, empty,
 and inert in a restore.
 
 ## 2. Live mirror — convergent copy
 
 ```bash
-rsync -a --delete --omit-dir-times --noatime /srv/tucano/data/ backup@offbox:/backups/tucano/mirror/
+rsync -a --delete --omit-dir-times --noatime /srv/tatu/data/ backup@offbox:/backups/tatu/mirror/
 ```
 
 Run it from cron/systemd timer as often as the data-loss objective demands. `--delete` keeps the
@@ -76,12 +76,12 @@ run the drill on the off-box host (or any machine with the image):
 
 ```bash
 # 1) unpack the artifact into a fresh directory — never over a live volume
-mkdir -p /drill/restored-data && zcat /backups/tucano/gold-<stamp>.tar.gz | tar -C /drill/restored-data -xf -
+mkdir -p /drill/restored-data && zcat /backups/tatu/gold-<stamp>.tar.gz | tar -C /drill/restored-data -xf -
 
 # 2) boot a second instance against it, on a spare port, with the same secrets
-set -a; . /etc/tucano/env; set +a          # TUCANO_JWT_SECRET et al., from the secret store
-TUCANO_DATA_DIR=/drill/restored-data PORT=3101 TUCANO_AUTH_REQUIRED=true \
-  docker run --rm -p 3101:3000 -v /drill/restored-data:/data tucano-test-api:<tag> &
+set -a; . /etc/tatu/env; set +a          # TATU_JWT_SECRET et al., from the secret store
+TATU_DATA_DIR=/drill/restored-data PORT=3101 TATU_AUTH_REQUIRED=true \
+  docker run --rm -p 3101:3000 -v /drill/restored-data:/data tatu-test-api:<tag> &
 
 # 3) assert the restored copy answers like the live one did
 curl -sf http://localhost:3101/health          # {"status":"ok","storage":"filesystem"}

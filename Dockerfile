@@ -32,17 +32,17 @@ RUN apt-get update \
     && apt-get upgrade --yes \
     && apt-get install --no-install-recommends --yes ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --uid 10001 --create-home --shell /usr/sbin/nologin tucano \
+    && useradd --system --uid 10001 --create-home --shell /usr/sbin/nologin tatu \
     && mkdir -p /data \
-    && chown tucano:tucano /data
+    && chown tatu:tatu /data
 
-COPY --from=builder /build/target/release/tucano-test /usr/local/bin/tucano-test
+COPY --from=builder /build/target/release/tatu-test /usr/local/bin/tatu-test
 
 LABEL org.opencontainers.image.version="${BUILD_NUMBER}"
 
-ENV TUCANO_DATA_DIR=/data
+ENV TATU_DATA_DIR=/data
 ENV PORT=3000
 EXPOSE 3000
 VOLUME ["/data"]
-USER tucano
-ENTRYPOINT ["/usr/local/bin/tucano-test"]
+USER tatu
+ENTRYPOINT ["/usr/local/bin/tatu-test"]

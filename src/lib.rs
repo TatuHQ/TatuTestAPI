@@ -1,4 +1,4 @@
-//! Tucano Test API.
+//! TatuTest API.
 //!
 //! The crate is layered: [`api`] speaks HTTP, [`domain`] holds the rules,
 //! [`storage`] owns the bytes on disk, and [`models`] describes the documents.

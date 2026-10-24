@@ -1,4 +1,4 @@
-# Clippy configuration for TucanoTestAPI.
+# Clippy configuration for TatuTestAPI.
 #
 # The crate-level `Cargo.toml` already sets `clippy::all = "deny"` and
 # `unsafe_code = "forbid"`. This file documents the thresholds the project

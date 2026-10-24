@@ -16,9 +16,9 @@ use std::process::{Command, Output};
 use tempfile::TempDir;
 
 /// The binary under test, as Cargo built it for this test run.
-const BINARY: &str = env!("CARGO_BIN_EXE_tucano-test");
+const BINARY: &str = env!("CARGO_BIN_EXE_tatu-test");
 
-/// Runs the binary with `TUCANO_CONFIG_FILE` pointed at `path`.
+/// Runs the binary with `TATU_CONFIG_FILE` pointed at `path`.
 ///
 /// The data directory is a temporary one too, so a run that somehow did reach
 /// the repository would write where the test owns the files. The key-file
@@ -27,10 +27,10 @@ const BINARY: &str = env!("CARGO_BIN_EXE_tucano-test");
 /// would replace the refusal under test with a key-ring one.
 fn run_with_config(path: &Path, data_dir: &Path) -> Output {
     Command::new(BINARY)
-        .env("TUCANO_CONFIG_FILE", path)
-        .env("TUCANO_DATA_DIR", data_dir)
-        .env("TUCANO_LOG", "error")
-        .env_remove("TUCANO_CONFIG_KEY_FILE")
+        .env("TATU_CONFIG_FILE", path)
+        .env("TATU_DATA_DIR", data_dir)
+        .env("TATU_LOG", "error")
+        .env_remove("TATU_CONFIG_KEY_FILE")
         .output()
         .expect("the built binary should be runnable")
 }
@@ -55,7 +55,7 @@ fn a_missing_configuration_file_names_the_setting_without_the_raw_path() {
     assert!(output.stdout.is_empty(), "the refusal belongs on stderr");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("TUCANO_CONFIG_FILE"), "{stderr}");
+    assert!(stderr.contains("TATU_CONFIG_FILE"), "{stderr}");
     assert!(
         !stderr.contains("absent-config.json"),
         "must not echo the raw path: {stderr}"
@@ -82,7 +82,7 @@ fn a_wrong_typed_setting_names_the_setting_and_never_the_value() {
     assert!(!output.status.success(), "a wrong type must refuse startup");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("TUCANO_CONFIG_FILE"), "{stderr}");
+    assert!(stderr.contains("TATU_CONFIG_FILE"), "{stderr}");
     assert!(stderr.contains("auth_required"), "{stderr}");
     assert!(
         !stderr.contains(SENTINEL),
@@ -110,7 +110,7 @@ fn a_wrong_typed_jwt_secret_names_the_setting_and_never_the_value() {
     assert!(!output.status.success(), "a wrong type must refuse startup");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("TUCANO_CONFIG_FILE"), "{stderr}");
+    assert!(stderr.contains("TATU_CONFIG_FILE"), "{stderr}");
     assert!(stderr.contains("jwt_secret"), "{stderr}");
     assert!(
         !stderr.contains(SENTINEL),
@@ -131,10 +131,10 @@ fn an_unusable_data_directory_names_the_path_and_the_uid() {
     let data_dir = blocker.join("deep");
 
     let output = std::process::Command::new(BINARY)
-        .env("TUCANO_DATA_DIR", &data_dir)
-        .env("TUCANO_LOG", "error")
-        .env_remove("TUCANO_CONFIG_FILE")
-        .env_remove("TUCANO_CONFIG_KEY_FILE")
+        .env("TATU_DATA_DIR", &data_dir)
+        .env("TATU_LOG", "error")
+        .env_remove("TATU_CONFIG_FILE")
+        .env_remove("TATU_CONFIG_KEY_FILE")
         .output()
         .expect("the built binary should be runnable");
     assert!(

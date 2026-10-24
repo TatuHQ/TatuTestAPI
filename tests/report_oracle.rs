@@ -15,7 +15,7 @@ use axum::{
 };
 use common::{assert_error_envelope, send_json};
 use serde_json::Value;
-use tucano_test::{
+use tatu_test::{
     api,
     auth::{AuthConfig, AuthStore, Role, User, hash_password},
     repository::FileRepository,

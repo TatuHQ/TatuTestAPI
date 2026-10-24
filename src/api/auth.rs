@@ -12,7 +12,7 @@
 //! editor writes content and runs, an owner administers a project, and a system
 //! administrator does anything anywhere.
 //!
-//! With `TUCANO_AUTH_REQUIRED` off the two steps are inert rather than
+//! With `TATU_AUTH_REQUIRED` off the two steps are inert rather than
 //! different: no identity is taken from the request and no grant is consulted,
 //! which is exactly the trusted-network service the API was before auth
 //! existed.
@@ -95,7 +95,7 @@ where
 /// Decides whether `principal` may act at `required` level in `project_id`.
 ///
 /// With authentication switched off there is no identity to check, so the
-/// operation is allowed: that is what `TUCANO_AUTH_REQUIRED=false` means, and a
+/// operation is allowed: that is what `TATU_AUTH_REQUIRED=false` means, and a
 /// handler must call this even then rather than deciding for itself. With it on,
 /// a system administrator passes without a grant and everyone else needs a grant
 /// at least as strong as `required`.

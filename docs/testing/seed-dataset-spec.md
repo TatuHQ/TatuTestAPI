@@ -1,7 +1,7 @@
 # Demo / seed dataset specification
 
 This document specifies the dataset the test-data generator seeds into a
-deployment, the tree it produces below `TUCANO_DATA_DIR`, the API calls that
+deployment, the tree it produces below `TATU_DATA_DIR`, the API calls that
 produce it, and what teardown removes. It is the contract the generator
 implementation (the sibling children of the tracking issue) is written against,
 and the checklist that decides whether the dataset still covers the feature set.
@@ -11,10 +11,10 @@ attachment in the target tree is produced by an HTTP call against the running
 API, so the generator exercises the same rules a client does and cannot drift
 into a shape the API would never write.
 
-- **Tracking issue:** [#192](https://github.com/TucanoTechnology/TucanoTestAPI/issues/192)
-- **Parent epic:** [#169 — Create test data generation script](https://github.com/TucanoTechnology/TucanoTestAPI/issues/169)
+- **Tracking issue:** [#192](https://github.com/TatuHQ/TatuTestAPI/issues/192)
+- **Parent epic:** [#169 — Create test data generation script](https://github.com/TatuHQ/TatuTestAPI/issues/169)
 - **Coverage matrix:** [below](#1-feature-coverage-matrix)
-- **Target tree:** [below](#2-target-tree-below-tucano_data_dir)
+- **Target tree:** [below](#2-target-tree-below-tatu_data_dir)
 - **Generating calls:** [below](#3-generating-api-calls)
 - **Teardown scope:** [below](#4-teardown-scope)
 
@@ -64,7 +64,7 @@ example is a gap, not a deferral.
 | 22 | Copy vs. move composition | copy is the default: `TC-LOGIN-1` (suite → project), `TC-ORDERS-1` (project → project), `TC-CATALOG-1` (project → suite) and `TC-SEARCH-1` (suite → suite) are each placed into a second parent while the source keeps its home. `"mode":"move"` relocates instead: `TC-MOVE-1` passes through all four directions (`smoke.checkout.json` → `checkout.json` → `payments.json` → `regression.checkout.json` → `smoke.payments.json`) and ends in the suite of the other project, and `TC-PROJECT-1` moves onto the project that already owns it, a no-op. The suite `portable.checkout.json` is moved into `payments.json` and then copied back, so it ends with one home in each — every parent pair is covered by one copy and one move | `POST /projects/{id}/test_cases`, `POST /test_suites/{id}/test_cases` and `POST /projects/{id}/test_suites`, each carrying `testCaseId`/`suiteId`, with `mode` selecting move (`mode` omitted is copy) | the copies in `projects/payments/` and `projects/checkout/smoke.checkout/` beside their sources in `projects/checkout/` and `projects/payments/`; `projects/payments/smoke.payments/TC-MOVE-1/` where the four-hop move ends; `portable.checkout.json` under both projects |
 | 23 | Coverage report | `GET /reports/coverage`, global and `?projectId=checkout.json` | the report routes | n/a (read-only — no new files) |
 | 24 | Summary report | `GET /reports/summary` and `?configurationId=chrome-linux.json` | the report routes | n/a (read-only — no new files) |
-| 25 | Auth users: system administrator | `admin` — the bootstrap account | `TUCANO_BOOTSTRAP_USERNAME`/`TUCANO_BOOTSTRAP_PASSWORD` at startup; `POST /auth/login` | `auth/users.json` (**not** produced by an API call — see [§5](#5-known-gap-auth-accounts-and-role-grants)) |
+| 25 | Auth users: system administrator | `admin` — the bootstrap account | `TATU_BOOTSTRAP_USERNAME`/`TATU_BOOTSTRAP_PASSWORD` at startup; `POST /auth/login` | `auth/users.json` (**not** produced by an API call — see [§5](#5-known-gap-auth-accounts-and-role-grants)) |
 | 26 | Auth users: non-admin accounts | `viewer` and `editor` — two stored accounts with no `systemAdmin` flag | written through the `AuthStore` path by the generator; `POST /auth/login` | `auth/users.json` (**not** produced by an API call) |
 | 27 | Role grants per project | `viewer` holds `owner` on `checkout.json` and `editor` holds `editor` on the same project; both hold **no grant at all** on `payments.json`. `admin` holds **no grant at all** — a system administrator is authorized without one (see [§5](#5-known-gap-auth-accounts-and-role-grants)) | written through the `AuthStore` grant path; verified by `GET /auth/me` as `viewer` and as `editor`, and for `admin` by an authorized write and by `systemAdmin: true` | `auth/projects/checkout.json` holding both grants (and no `auth/projects/payments.json`) |
 | 28 | Authorization enforcement | an `editor` token writes the content inside its project — `POST /projects/{id}/test_suites` is accepted — while `PUT /projects/{id}` on the same project is refused with `forbidden`, because the project document needs `owner`. The `viewer`-scoped token proves reads succeed and a write needing a grant it does not hold is refused | any guarded write with the scoped token | n/a (the acceptance and the refusal are the evidence) |
@@ -207,7 +207,7 @@ the check.
 Teardown-scope operations count as accounted for because [§4](#4-teardown-scope)
 is the document that specifies them, and the check verifies they reach it.
 
-## 2. Target tree below `TUCANO_DATA_DIR`
+## 2. Target tree below `TATU_DATA_DIR`
 
 The tree below is what a successful seed run leaves behind, with the fixed
 identifiers this document specifies. `<stamp>` is the unique prefix the API puts
@@ -216,12 +216,12 @@ API's duplicate route derives; both are read back from the API's own response
 rather than assumed.
 
 ```
-$TUCANO_DATA_DIR/
+$TATU_DATA_DIR/
 ├── auth/
 │   ├── users.json                            # accounts, password hashes, refresh tokens
 │   └── projects/
 │       └── checkout.json                     # {"grants": {"<viewer id>": "owner", "<editor id>": "editor"}}
-├── .tucano.lock                              # advisory lock, created by the API
+├── .tatu.lock                              # advisory lock, created by the API
 ├── projects/
 │   ├── checkout/
 │   │   ├── project.json                      # {"projectId","name","tags":["checkout","regression"]}
@@ -337,9 +337,9 @@ deliberately:
   suite without copying it, so the demo tree leaves every identifier with
   exactly one home: a durable two-home dataset is deliberate ambiguity, the
   contract tests assert the refusals it produces, and no client of the demo
-  dataset should have to route around them (TucanoTestAPI#462 tracks the
+  dataset should have to route around them (TatuTestAPI#462 tracks the
   parent-scoped routes that would make such a dataset usable, and
-  TucanoTestGUI#178-style explorations stay honest without it).
+  TatuTestGUI#178-style explorations stay honest without it).
 
 ## 3. Generating API calls
 
@@ -363,12 +363,12 @@ depends on:
 
 | Variable | Value the seed needs |
 | --- | --- |
-| `TUCANO_AUTH_REQUIRED` | `true`, so every guarded route enforces a token. |
-| `TUCANO_JWT_SECRET` (or `TUCANO_JWT_SECRET_FILE`) | A signing secret of at least 32 bytes. |
-| `TUCANO_BOOTSTRAP_USERNAME` | Together, the account created once on a store that already holds no accounts. |
-| `TUCANO_BOOTSTRAP_PASSWORD` | The password for that account. |
+| `TATU_AUTH_REQUIRED` | `true`, so every guarded route enforces a token. |
+| `TATU_JWT_SECRET` (or `TATU_JWT_SECRET_FILE`) | A signing secret of at least 32 bytes. |
+| `TATU_BOOTSTRAP_USERNAME` | Together, the account created once on a store that already holds no accounts. |
+| `TATU_BOOTSTRAP_PASSWORD` | The password for that account. |
 
-With `TUCANO_AUTH_REQUIRED` off, a server starts with no signing secret at all
+With `TATU_AUTH_REQUIRED` off, a server starts with no signing secret at all
 and every `POST /auth/login` answers `storage_error` ("auth is not configured
 with a signing secret") instead of a session, so step 0 must run first and fail
 loudly.
@@ -376,7 +376,7 @@ loudly.
 ```sh
 curl -sS -X POST "$API/auth/login" \
   -H 'Content-Type: application/json' \
-  -d '{"username":"'"$TUCANO_BOOTSTRAP_USERNAME"'","password":"'"$TUCANO_BOOTSTRAP_PASSWORD"'"}'
+  -d '{"username":"'"$TATU_BOOTSTRAP_USERNAME"'","password":"'"$TATU_BOOTSTRAP_PASSWORD"'"}'
 ```
 
 The response carries `accessToken`, `refreshToken`, `tokenType` and
@@ -858,10 +858,10 @@ step 6 also cleans up anything steps 3 to 5 missed.
   `chrome-linux.json` from `checkout.json` and `firefox-linux.json` from
   `payments.json`, and nothing else.)
 - **The bootstrap account.** `admin` is created by the deployment at startup
-  from `TUCANO_BOOTSTRAP_USERNAME`/`TUCANO_BOOTSTRAP_PASSWORD`, not by the seed,
+  from `TATU_BOOTSTRAP_USERNAME`/`TATU_BOOTSTRAP_PASSWORD`, not by the seed,
   and removing it would lock out the next run. Teardown removes the seed's own
   non-admin accounts and its grants, and leaves the bootstrap account alone.
-- **Anything outside `TUCANO_DATA_DIR`.** No fixture, no container volume, no
+- **Anything outside `TATU_DATA_DIR`.** No fixture, no container volume, no
   file the generator did not write.
 - **The data volume itself.** Teardown empties the seed, it does not drop the
   volume or truncate a file it did not create.
@@ -915,8 +915,8 @@ keyed on the identifier, where every lookup that goes through `auth/users.json`
 stops seeing it.
 
 The name it removes is the teardown's, not the seed's: the seed always writes
-`viewer` and `editor`, while `TUCANO_SEED_VIEWER_USERNAME` and
-`TUCANO_SEED_EDITOR_USERNAME` say which account that run should address, for a
+`viewer` and `editor`, while `TATU_SEED_VIEWER_USERNAME` and
+`TATU_SEED_EDITOR_USERNAME` say which account that run should address, for a
 volume whose accounts were created under other names by hand. An `absent`
 outcome is therefore a settled teardown only while the seed's own name holds
 nothing. The subcommand's read-only `--check` mode reports where an account and
@@ -924,7 +924,7 @@ the named grants stand, writes no state, and ends with its own summary line —
 `unseed-auth: check account=… system_admin=… grants_present=… grants_absent=… orphans=…`
 — whose `orphans` count is the grants still recorded, anywhere in the store,
 against an account identifier `auth/users.json` does not hold. Opening the store
-at all creates `auth/`, `auth/projects/` and an empty `.tucano.lock`, even on a
+at all creates `auth/`, `auth/projects/` and an empty `.tatu.lock`, even on a
 volume that holds nothing, so a check on a pristine data directory leaves those
 three behind and nothing else. The teardown runs that check once per run, after
 every account has been dealt with, whichever name it was configured with and
@@ -955,7 +955,7 @@ API":
   back. The generator never writes these files through the HTTP surface because
   it cannot.
 - **The bootstrap account is not written by the generator.** It is created by the
-  deployment at startup from `TUCANO_BOOTSTRAP_USERNAME`/`TUCANO_BOOTSTRAP_PASSWORD`,
+  deployment at startup from `TATU_BOOTSTRAP_USERNAME`/`TATU_BOOTSTRAP_PASSWORD`,
   and the seed signs in as it to obtain the token every other call needs. Row 25
   lists it as a seeded example because the dataset is not complete without it;
   its producing call is that startup path, not a call the generator makes.
@@ -1018,7 +1018,7 @@ honest:
 2. **A new row adds an assertion.** The validation step in [§3 step 12](#step-12--validation-of-the-seeded-environment)
    covers the new row, so a stale matrix fails a check rather than being
    discovered by a reader.
-3. **A new stored file is named here.** The target tree in [§2](#2-target-tree-below-tucano_data_dir)
+3. **A new stored file is named here.** The target tree in [§2](#2-target-tree-below-tatu_data_dir)
    names every file the seed writes. A file the seed writes but this document
    does not name is a bug in one of the two.
 
@@ -1030,7 +1030,7 @@ above.
 ## 7. Implementation status
 
 `scripts/seed.mjs` implements [§3 steps 0–11](#3-generating-api-calls). It is
-deliberately **not idempotent**: the identifiers in [§2](#2-target-tree-below-tucano_data_dir)
+deliberately **not idempotent**: the identifiers in [§2](#2-target-tree-below-tatu_data_dir)
 are fixed, and placing a case onto an identifier its target parent already holds
 is a `409`, so a second run onto the same volume cannot complete. Instead the
 script refuses up front when its own identifiers are already present and points
@@ -1042,7 +1042,7 @@ accounts and grants: the API publishes no route for either, so the server binary
 grows a `seed-auth` subcommand (`src/auth/seed.rs`) that writes them through the
 same `AuthStore` the running server reads. Unlike the dataset itself it *is*
 idempotent — an existing account keeps its password and only missing grants are
-added. The script invokes it through `TUCANO_SEED_AUTH_CMD`, once per account
+added. The script invokes it through `TATU_SEED_AUTH_CMD`, once per account
 the dataset needs — the `viewer` at `owner` and the `editor` at `editor` — skips
 the step with a notice when that is unset, and then performs the `GET /auth/me`
 assertion for each, which closes the loop.

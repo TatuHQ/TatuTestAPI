@@ -19,11 +19,11 @@ use std::pin::Pin;
 use std::sync::OnceLock;
 use std::task::{Context, Poll};
 use std::time::Duration;
+use tatu_test::{api, repository::FileRepository};
 use tempfile::TempDir;
 use tower::ServiceExt;
-use tucano_test::{api, repository::FileRepository};
 
-pub const BOUNDARY: &str = "tucanotestboundary";
+pub const BOUNDARY: &str = "tatutestboundary";
 
 /// Builds a router backed by an isolated temporary data directory.
 /// The returned `TempDir` must stay alive for the duration of the test.
@@ -35,15 +35,15 @@ pub fn test_app() -> (TempDir, Router) {
 
 pub fn app_at(path: &Path) -> Router {
     let repository = FileRepository::new(path).expect("repository");
-    let store = tucano_test::auth::AuthStore::new(path).expect("auth store");
+    let store = tatu_test::auth::AuthStore::new(path).expect("auth store");
     // Authentication is off by default, which is the behaviour these suites were
     // written against: the resource routes ask no caller for a token. The suites
     // that exercise authentication build their own router.
-    let config = tucano_test::auth::AuthConfig {
+    let config = tatu_test::auth::AuthConfig {
         required: false,
         jwt_secret: None,
-        access_ttl: tucano_test::auth::DEFAULT_ACCESS_TTL,
-        refresh_ttl: tucano_test::auth::DEFAULT_REFRESH_TTL,
+        access_ttl: tatu_test::auth::DEFAULT_ACCESS_TTL,
+        refresh_ttl: tatu_test::auth::DEFAULT_REFRESH_TTL,
         bootstrap_username: None,
         bootstrap_password: None,
     };
@@ -60,14 +60,14 @@ pub fn app_at_with_lock_timeout(path: &Path, timeout: Duration) -> Router {
     let repository = FileRepository::new(path)
         .expect("repository")
         .with_lock_timeout(timeout);
-    let store = tucano_test::auth::AuthStore::new(path)
+    let store = tatu_test::auth::AuthStore::new(path)
         .expect("auth store")
         .with_lock_timeout(timeout);
-    let config = tucano_test::auth::AuthConfig {
+    let config = tatu_test::auth::AuthConfig {
         required: false,
         jwt_secret: None,
-        access_ttl: tucano_test::auth::DEFAULT_ACCESS_TTL,
-        refresh_ttl: tucano_test::auth::DEFAULT_REFRESH_TTL,
+        access_ttl: tatu_test::auth::DEFAULT_ACCESS_TTL,
+        refresh_ttl: tatu_test::auth::DEFAULT_REFRESH_TTL,
         bootstrap_username: None,
         bootstrap_password: None,
     };
@@ -81,15 +81,15 @@ pub fn app_at_with_lock_timeout(path: &Path, timeout: Duration) -> Router {
 /// the timeout, concurrency, and body-size ceilings the tests drive directly.
 pub fn app_at_with_guardrails(
     path: &Path,
-    guardrails: tucano_test::api::guardrails::Guardrails,
+    guardrails: tatu_test::api::guardrails::Guardrails,
 ) -> Router {
     let repository = FileRepository::new(path).expect("repository");
-    let store = tucano_test::auth::AuthStore::new(path).expect("auth store");
-    let config = tucano_test::auth::AuthConfig {
+    let store = tatu_test::auth::AuthStore::new(path).expect("auth store");
+    let config = tatu_test::auth::AuthConfig {
         required: false,
         jwt_secret: None,
-        access_ttl: tucano_test::auth::DEFAULT_ACCESS_TTL,
-        refresh_ttl: tucano_test::auth::DEFAULT_REFRESH_TTL,
+        access_ttl: tatu_test::auth::DEFAULT_ACCESS_TTL,
+        refresh_ttl: tatu_test::auth::DEFAULT_REFRESH_TTL,
         bootstrap_username: None,
         bootstrap_password: None,
     };
@@ -103,7 +103,7 @@ pub fn app_at_with_guardrails(
 /// Wraps a router so every request that reaches a route is recorded.
 ///
 /// The extra layer is inert unless a coverage run names a log file with
-/// `TUCANO_ROUTE_LOG`, so the suites pay a branch and nothing else. It is inert
+/// `TATU_ROUTE_LOG`, so the suites pay a branch and nothing else. It is inert
 /// on the checking pass too, which reads the recording rather than adding to it.
 ///
 /// It belongs outside the routes, which is why every caller here applies it to
@@ -148,10 +148,10 @@ async fn record_route(request: Request<Body>, next: Next) -> Response {
 fn route_log() -> Option<&'static Path> {
     static LOG: OnceLock<Option<PathBuf>> = OnceLock::new();
     LOG.get_or_init(|| {
-        if std::env::var_os("TUCANO_ROUTE_LOG_ASSERT").is_some() {
+        if std::env::var_os("TATU_ROUTE_LOG_ASSERT").is_some() {
             return None;
         }
-        std::env::var_os("TUCANO_ROUTE_LOG").map(PathBuf::from)
+        std::env::var_os("TATU_ROUTE_LOG").map(PathBuf::from)
     })
     .as_deref()
 }

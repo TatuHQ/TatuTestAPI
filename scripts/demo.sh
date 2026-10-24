@@ -2,7 +2,7 @@
 #
 # The one-command demo and fixture path (issue #195).
 #
-# Brings a throwaway Tucano Test API stack up, authenticates it, seeds the demo
+# Brings a throwaway TatuTest API stack up, authenticates it, seeds the demo
 # dataset, runs the scratch-CRUD smoke check, and validates that the dataset the
 # smoke check just touched really is the one the specification describes. One
 # command, one exit status: zero means every stage held.
@@ -22,8 +22,8 @@
 # file joins the repository, and the demo stack stays separate from the one
 # `docker compose up -d --build` starts.
 #
-# The stack is a separate Compose project (tucano-test-demo by default) on its
-# own host port, so it never touches the long-running `tucano-test` stack or its
+# The stack is a separate Compose project (tatu-test-demo by default) on its
+# own host port, so it never touches the long-running `tatu-test` stack or its
 # api container. Data lives in a named volume, so it survives a restart of the
 # demo stack and is only removed by `--down`.
 #
@@ -31,7 +31,7 @@
 #   scripts/demo.sh [--down|--status] [--build] [--port N] [--project NAME]
 #
 # Environment:
-#   DEMO_PROJECT        Compose project name (default tucano-test-demo)
+#   DEMO_PROJECT        Compose project name (default tatu-test-demo)
 #   DEMO_PORT           Host port to publish (default 3199)
 #   DEMO_DATA_VOLUME    Named volume for /data (default <project>_data)
 #   DEMO_ADMIN_USER     Bootstrap account to seed and validate with (default admin)
@@ -44,7 +44,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${HERE}/.." && pwd)"
 
-PROJECT="${DEMO_PROJECT:-tucano-test-demo}"
+PROJECT="${DEMO_PROJECT:-tatu-test-demo}"
 PORT="${DEMO_PORT:-3199}"
 VOLUME="${DEMO_DATA_VOLUME:-${PROJECT}_data}"
 ADMIN_USER="${DEMO_ADMIN_USER:-admin}"
@@ -113,14 +113,14 @@ services:
     build:
       context: ${REPO_ROOT}
       dockerfile: Dockerfile
-    image: tucano-test-api:local
+    image: tatu-test-api:local
     environment:
-      TUCANO_DATA_DIR: /data
+      TATU_DATA_DIR: /data
       PORT: 3000
-      TUCANO_AUTH_REQUIRED: "true"
-      TUCANO_JWT_SECRET: ${JWT_SECRET}
-      TUCANO_BOOTSTRAP_USERNAME: ${ADMIN_USER}
-      TUCANO_BOOTSTRAP_PASSWORD: ${ADMIN_PASSWORD}
+      TATU_AUTH_REQUIRED: "true"
+      TATU_JWT_SECRET: ${JWT_SECRET}
+      TATU_BOOTSTRAP_USERNAME: ${ADMIN_USER}
+      TATU_BOOTSTRAP_PASSWORD: ${ADMIN_PASSWORD}
     ports:
       - "${PORT}:3000"
     volumes:
@@ -181,10 +181,10 @@ stage_up() {
 
 stage_seed() {
   echo "demo: seeding the dataset"
-  TUCANO_API_URL="$BASE_URL" \
-    TUCANO_BOOTSTRAP_USERNAME="$ADMIN_USER" \
-    TUCANO_BOOTSTRAP_PASSWORD="$ADMIN_PASSWORD" \
-    TUCANO_SEED_AUTH_CMD="docker compose --project-name ${PROJECT} --file ${COMPOSE_FILE} exec -T api tucano-test seed-auth" \
+  TATU_API_URL="$BASE_URL" \
+    TATU_BOOTSTRAP_USERNAME="$ADMIN_USER" \
+    TATU_BOOTSTRAP_PASSWORD="$ADMIN_PASSWORD" \
+    TATU_SEED_AUTH_CMD="docker compose --project-name ${PROJECT} --file ${COMPOSE_FILE} exec -T api tatu-test seed-auth" \
     node "${HERE}/seed.mjs" "$BASE_URL"
 }
 
@@ -196,9 +196,9 @@ stage_smoke() {
 
 stage_validate() {
   echo "demo: validating the seeded dataset"
-  TUCANO_API_URL="$BASE_URL" \
-    TUCANO_BOOTSTRAP_USERNAME="$ADMIN_USER" \
-    TUCANO_BOOTSTRAP_PASSWORD="$ADMIN_PASSWORD" \
+  TATU_API_URL="$BASE_URL" \
+    TATU_BOOTSTRAP_USERNAME="$ADMIN_USER" \
+    TATU_BOOTSTRAP_PASSWORD="$ADMIN_PASSWORD" \
     node "${HERE}/validate-seed.mjs" "$BASE_URL"
 }
 
@@ -213,10 +213,10 @@ stage_teardown() {
     echo "demo: the stack is not up, so there is no dataset to tear down"
     return 0
   fi
-  TUCANO_API_URL="$BASE_URL" \
-    TUCANO_BOOTSTRAP_USERNAME="$ADMIN_USER" \
-    TUCANO_BOOTSTRAP_PASSWORD="$ADMIN_PASSWORD" \
-    TUCANO_UNSEED_AUTH_CMD="docker compose --project-name ${PROJECT} --file ${COMPOSE_FILE} exec -T api tucano-test unseed-auth" \
+  TATU_API_URL="$BASE_URL" \
+    TATU_BOOTSTRAP_USERNAME="$ADMIN_USER" \
+    TATU_BOOTSTRAP_PASSWORD="$ADMIN_PASSWORD" \
+    TATU_UNSEED_AUTH_CMD="docker compose --project-name ${PROJECT} --file ${COMPOSE_FILE} exec -T api tatu-test unseed-auth" \
     node "${HERE}/teardown.mjs" "$BASE_URL"
 }
 

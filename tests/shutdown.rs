@@ -11,7 +11,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const BINARY: &str = env!("CARGO_BIN_EXE_tucano-test");
+const BINARY: &str = env!("CARGO_BIN_EXE_tatu-test");
 
 /// Owns the test server and reaps it on every path: a graceful exit is the
 /// happy path, kill-and-reap on drop is the fallback, so a failed assertion
@@ -23,10 +23,10 @@ struct Server {
 impl Server {
     fn start(directory: &std::path::Path, port: u16) -> Self {
         let mut child = Command::new(BINARY)
-            .env("TUCANO_DATA_DIR", directory)
+            .env("TATU_DATA_DIR", directory)
             .env("PORT", port.to_string())
-            .env("TUCANO_LOG", "error")
-            .env_remove("TUCANO_CONFIG_FILE")
+            .env("TATU_LOG", "error")
+            .env_remove("TATU_CONFIG_FILE")
             .stdin(Stdio::null())
             .spawn()
             .expect("start the server");
@@ -112,7 +112,7 @@ fn a_sigterm_drains_the_request_the_handler_is_still_working() {
         .create(true)
         .truncate(false)
         .write(true)
-        .open(directory.path().join(".tucano.lock"))
+        .open(directory.path().join(".tatu.lock"))
         .expect("lock file");
     fs2::FileExt::lock_exclusive(&lock).expect("hold the lock");
     let mut conn = TcpStream::connect(("127.0.0.1", port)).expect("connect");

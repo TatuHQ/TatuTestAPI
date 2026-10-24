@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the security scanning and dependency management policy for Tucano Test API.
+This document defines the security scanning and dependency management policy for TatuTest API.
 
 ## CI Security Scanning
 
@@ -56,7 +56,7 @@ Two jobs scan the image, under one policy: report CRITICAL and HIGH severity iss
 findings with no available fix, and **fail the run** if anything is found.
 
 - **Every pull request, every push to `main`, and weekly** — `container-scan` in `security.yml`
-  builds the image inside the job (`docker build --file Dockerfile --tag tucano-test .`) and scans
+  builds the image inside the job (`docker build --file Dockerfile --tag tatu-test .`) and scans
   that local build.
 - **Every push to `main` and every `v*.*.*` tag, in the job that publishes** — `release.yml` scans
   the artifact it just pushed, and only that artifact: the image reference is assembled from the
@@ -202,14 +202,14 @@ docker run --rm -v "$PWD:/repo:ro" zricethezav/gitleaks:v8.30.1 git /repo --reda
 # --no-git mode could not see and what F-179-5 (#334) closed.
 
 # Test container scanning (the security.yml job's local build)
-docker build -t tucano-test .
-trivy image tucano-test
+docker build -t tatu-test .
+trivy image tatu-test
 
 # Test the release scan: name a published digest, never a tag, and use the
 # policy the job uses. The reference is what `release.yml` builds from the
 # build step's `digest` output.
 trivy image --exit-code 1 --ignore-unfixed --severity CRITICAL,HIGH \
-  ghcr.io/tucanotechnology/tucanotestapi@sha256:<digest>
+  ghcr.io/tatuhq/tatutestapi@sha256:<digest>
 
 # Clean up
 git reset --soft HEAD~1
@@ -220,4 +220,4 @@ rm tracked_secret_fixture.txt "$SCAN_DIR"
 
 - SBOM artifacts are retained for 90 days
 - Security scan results are available in GitHub Actions logs
-- Vulnerability disclosures should be sent to security@tucano.example.com
+- Vulnerability disclosures should be sent to security@tatu.example.com

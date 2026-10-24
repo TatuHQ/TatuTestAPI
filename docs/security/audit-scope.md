@@ -1,12 +1,12 @@
 # Security Audit Scope, Methodology, and Severity Rubric (Issue #175)
 
-Issue: [#175](https://github.com/TucanoTechnology/TucanoTestAPI/issues/175). Parent epic:
-[#166](https://github.com/TucanoTechnology/TucanoTestAPI/issues/166) — *Carry out security audit*.
+Issue: [#175](https://github.com/TatuHQ/TatuTestAPI/issues/175). Parent epic:
+[#166](https://github.com/TatuHQ/TatuTestAPI/issues/166) — *Carry out security audit*.
 
 This document is the agreement that has to exist **before** the audit runs: what it covers, how a
 finding is scored, what evidence a finding must carry, and what is explicitly not in scope. The
-audit tasks [#176](https://github.com/TucanoTechnology/TucanoTestAPI/issues/176)–[#179](https://github.com/TucanoTechnology/TucanoTestAPI/issues/179)
-work to this document, and the triage task [#180](https://github.com/TucanoTechnology/TucanoTestAPI/issues/180)
+audit tasks [#176](https://github.com/TatuHQ/TatuTestAPI/issues/176)–[#179](https://github.com/TatuHQ/TatuTestAPI/issues/179)
+work to this document, and the triage task [#180](https://github.com/TatuHQ/TatuTestAPI/issues/180)
 consumes its output. It adds no route, no field, and no stored-document change, and it ships no
 application code.
 
@@ -32,8 +32,8 @@ remediation tickets #180 raises.
 ### Rules of engagement
 
 - **A throwaway deployment is mandatory.** Never point an audit at the instance the operator uses.
-  On this machine the long-lived instance is the Compose project `tucano-test` (container
-  `tucano-test-api-1`); it is **never** a test target, and it must not be stopped or rebuilt by an
+  On this machine the long-lived instance is the Compose project `tatu-test` (container
+  `tatu-test-api-1`); it is **never** a test target, and it must not be stopped or rebuilt by an
   audit. Audits use their own Compose project name and a free port.
 - **Data volumes are disposable.** An audit volume holds seeded, non-real data. If an audit must
   read a production-like volume, it reads a copy.
@@ -50,10 +50,10 @@ boundaries already named in [threat-model.md](threat-model.md).
 
 | # | Surface | Audit task | What is examined |
 | --- | --- | --- | --- |
-| S1 | HTTP surface | [#176](https://github.com/TucanoTechnology/TucanoTestAPI/issues/176) | Every route in the served contract: authentication and authorization (authn/authz), object-level authorization and IDOR, identifier validation and path traversal, request-body and upload abuse, error-envelope and header disclosure, session and token lifecycle. |
-| S2 | Storage and filesystem | [#177](https://github.com/TucanoTechnology/TucanoTestAPI/issues/177) | Path confinement and symlink handling, atomicity and durability of writes, the advisory lock, attachment and revision storage, file permissions on documents and on the authentication store, and the on-disk tree as an integrity boundary. |
-| S3 | Container and deployment | [#178](https://github.com/TucanoTechnology/TucanoTestAPI/issues/178) | The image and its build, the Compose configuration and container hardening, secret delivery from outside the image, the volume as the only state, network exposure, and rollback to an immutable tag. |
-| S4 | Dependencies and supply chain | [#179](https://github.com/TucanoTechnology/TucanoTestAPI/issues/179) | The dependency inventory and its advisories, the CI supply-chain controls, action and image pinning, the SBOM, and the workflow permissions model. |
+| S1 | HTTP surface | [#176](https://github.com/TatuHQ/TatuTestAPI/issues/176) | Every route in the served contract: authentication and authorization (authn/authz), object-level authorization and IDOR, identifier validation and path traversal, request-body and upload abuse, error-envelope and header disclosure, session and token lifecycle. |
+| S2 | Storage and filesystem | [#177](https://github.com/TatuHQ/TatuTestAPI/issues/177) | Path confinement and symlink handling, atomicity and durability of writes, the advisory lock, attachment and revision storage, file permissions on documents and on the authentication store, and the on-disk tree as an integrity boundary. |
+| S3 | Container and deployment | [#178](https://github.com/TatuHQ/TatuTestAPI/issues/178) | The image and its build, the Compose configuration and container hardening, secret delivery from outside the image, the volume as the only state, network exposure, and rollback to an immutable tag. |
+| S4 | Dependencies and supply chain | [#179](https://github.com/TatuHQ/TatuTestAPI/issues/179) | The dependency inventory and its advisories, the CI supply-chain controls, action and image pinning, the SBOM, and the workflow permissions model. |
 
 ### Trust boundaries in scope
 
@@ -105,7 +105,7 @@ control that is present but not reached, or a documented control that does not h
 
 | Excluded | Why |
 | --- | --- |
-| The paired GUI repository, [TucanoTestGUI](https://github.com/TucanoTechnology/TucanoTestGUI) | A separate repository with its own review, CI, and issue tracker. Its own audit is its own ticket. Only boundary 9 is audited here, and only as the service's guarantee. |
+| The paired GUI repository, [TatuTestGUI](https://github.com/TatuHQ/TatuTestGUI) | A separate repository with its own review, CI, and issue tracker. Its own audit is its own ticket. Only boundary 9 is audited here, and only as the service's guarantee. |
 | The human operator's long-lived deployment, and any real or production data | Not the auditor's system, and not a dataset an audit may touch. See *Rules of engagement*. |
 | Third-party infrastructure: GitHub Actions runners, GHCR, the Docker registry, crates.io, the RustSec database, the deployment platform's ingress, TLS terminators, and DNS | Operated by third parties under their own security programmes. The audit examines only *how this repository uses them* — pinning, permissions, what is published — never the third party itself. |
 | The container engine, the host kernel, the host filesystem, and the container runtime | Outside the trust boundary of the application. A host compromise is a precondition, not a finding, although the audit may record where the deployment relies on the host holding (for example shared-storage advisory locks). |
@@ -217,10 +217,10 @@ each severity names, so that two audit tasks score the same defect the same way.
 
 - **Critical.** With the shipped Compose configuration, `GET /openapi.json` is public by design, and
   suppose some route derived a filesystem path from a request field without confinement, so a single
-  unauthenticated request read a file outside `TUCANO_DATA_DIR`. Exploitability *Trivial*, impact
+  unauthenticated request read a file outside `TATU_DATA_DIR`. Exploitability *Trivial*, impact
   *Severe*, and reachable in the default configuration → **Critical**.
 - **Info.** `scripts/clear-data.mjs` probes a fixed list of base URLs and sends no credentials, so
-  against an installation with `TUCANO_AUTH_REQUIRED` on it cannot complete its deletions and must
+  against an installation with `TATU_AUTH_REQUIRED` on it cannot complete its deletions and must
   be pointed at a deployment without authentication or paired with a hand-supplied token. Nothing
   confidential is exposed — the script is limited to the caller's own authority — so this is a
   tooling observation → **Info**. (Recorded here as calibration; it is for #179 or #178 to confirm
@@ -228,12 +228,12 @@ each severity names, so that two audit tasks score the same defect the same way.
 
 ## 6. How the audit tasks run
 
-Every audit task [#176](https://github.com/TucanoTechnology/TucanoTestAPI/issues/176)–[#179](https://github.com/TucanoTechnology/TucanoTestAPI/issues/179)
+Every audit task [#176](https://github.com/TatuHQ/TatuTestAPI/issues/176)–[#179](https://github.com/TatuHQ/TatuTestAPI/issues/179)
 follows the same shape, so their reports can be compared and triaged together.
 
 1. **Pin the revision.** Record the commit SHA the audit ran against.
 2. **Stand up a throwaway target.** Its own Compose project and volume, on a free port, seeded to a
-   known state, with both `TUCANO_AUTH_REQUIRED` off and on, because several threats only exist in
+   known state, with both `TATU_AUTH_REQUIRED` off and on, because several threats only exist in
    one of the two modes.
 3. **Enumerate before probing.** List the surface from the served contract and from the code, so
    coverage can be shown as a count rather than asserted.

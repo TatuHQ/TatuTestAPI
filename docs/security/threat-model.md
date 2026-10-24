@@ -2,7 +2,7 @@
 
 ## Scope
 
-This threat model covers the Rust HTTP service, its JSON filesystem repository, attachment handling, and the [TucanoTestGUI](https://github.com/TucanoTechnology/TucanoTestGUI) client.
+This threat model covers the Rust HTTP service, its JSON filesystem repository, attachment handling, and the [TatuTestGUI](https://github.com/TatuHQ/TatuTestGUI) client.
 
 The service now exposes CRUD and attachment endpoints, so the controls below are live requirements rather than design intent. Controls that remain unimplemented are called out explicitly in the Open decisions section.
 
@@ -107,7 +107,7 @@ These decisions must be resolved before the HTTP compatibility layer is exposed 
   tokens, Argon2id password hashes, and project-scoped RBAC enforced in every guarded handler.
   Passwords and refresh tokens are stored only as hashes; the auth matrix is `tests/auth.rs`.
 - ✅ The shipped Compose stack authenticates by default (#278, merged 2026-09-17): the shipped
-  `docker-compose.yml` resolves `TUCANO_AUTH_REQUIRED` to `true` unless the operator overrides it,
+  `docker-compose.yml` resolves `TATU_AUTH_REQUIRED` to `true` unless the operator overrides it,
   so the shipped configuration no longer combines an all-interfaces publish with authentication
   off — the exposure audit finding F-178-1 measured in
   [audit-s3-container-and-deployment.md](audit-s3-container-and-deployment.md). The service-level
@@ -124,10 +124,10 @@ These decisions must be resolved before the HTTP compatibility layer is exposed 
   #188–#190; until those land, this repository reads its configuration from the environment only,
   exactly as the *Current state* section of that decision records.
 - ✅ The configuration file's schema and loader landed (#188): `src/config.rs` reads only the file
-  named by the environment-only `TUCANO_CONFIG_FILE`, refuses an unknown key, an unsupported
+  named by the environment-only `TATU_CONFIG_FILE`, refuses an unknown key, an unsupported
   `version`, a malformed document and an unreadable (including missing) file at startup, and none of
   its error text carries a secret value or a raw path. Precedence is per key — environment, then
-  file, then default — and no `TUCANO_CONFIG_FILE` means no file is consulted at all, so the
+  file, then default — and no `TATU_CONFIG_FILE` means no file is consulted at all, so the
   env-only behaviour is unchanged. Invariant 8 is therefore now enforced in code rather than only
   decided. **The file has no encryption yet**: #189's AEAD envelope and externally supplied key are
   still pending, so a secret held in the file is in the clear and the *Configuration key* boundary
@@ -143,7 +143,7 @@ These decisions must be resolved before the HTTP compatibility layer is exposed 
 - **Authorization is decided before existence.** Because a handler checks the caller against the
   project it names before it loads the resource, a restricted caller can receive `403` where an
   anonymous-old deployment would have answered `404` for an identifier that does not exist. With
-  `TUCANO_AUTH_REQUIRED` off every guard returns, so behaviour is unchanged.
+  `TATU_AUTH_REQUIRED` off every guard returns, so behaviour is unchanged.
   The one place where a FILTER parameter — not a path — resolved across the whole store used to
   complete the oracle the other way: `milestoneId`/`configurationId` on `/reports/summary` answered
   `404`/`409` for identifiers living in tenants the caller cannot see, which distinguishes
@@ -152,7 +152,7 @@ These decisions must be resolved before the HTTP compatibility layer is exposed 
   while a caller who CAN see one of the homes keeps the documented `409` ambiguity and a trusted
   deployment keeps every genuine `404`.
 - **There is no grant-administration endpoint.** Accounts and grants are read from
-  `TUCANO_DATA_DIR/auth/`, which must be provisioned out of band; creating a project does not grant
+  `TATU_DATA_DIR/auth/`, which must be provisioned out of band; creating a project does not grant
   its creator a role, so a project can exist with no grant-holder until an administrator adds one.
 - **File encryption protects against accidents, not against an actor who can read the volume.** Once
   the encrypted configuration file exists, its key is supplied from outside it, so an attacker who

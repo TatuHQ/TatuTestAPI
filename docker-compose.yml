@@ -1,3 +1,5 @@
+name: tatutest
+
 services:
   api:
     build:
@@ -8,24 +10,24 @@ services:
     # rollback therefore records the running container's image id and pins it
     # under a rollback-only tag *before* rebuilding — see "Rollback" in
     # docs/deployment/canary-validation-and-rollback.md (audit finding F-178-2).
-    image: tucano-test-api:local
+    image: tatu-test-api:local
     environment:
-      TUCANO_DATA_DIR: /data
+      TATU_DATA_DIR: /data
       PORT: 3000
       # Authentication is on by default for the local stack, so the safe posture
       # is the one the shipped file produces (audit finding F-178-1 in
       # docs/security/audit-s3-container-and-deployment.md). Supply the signing
       # secret and the bootstrap password in a `.env` file next to this file —
-      # copy `.env.example` and set them. Set TUCANO_AUTH_REQUIRED to `false`
+      # copy `.env.example` and set them. Set TATU_AUTH_REQUIRED to `false`
       # to run anonymously, which is only safe on a single-user machine that
       # nothing else can reach.
-      TUCANO_AUTH_REQUIRED: "${TUCANO_AUTH_REQUIRED:-true}"
+      TATU_AUTH_REQUIRED: "${TATU_AUTH_REQUIRED:-true}"
       # The deadline on the data volume's advisory lock, in milliseconds. See
-      # TUCANO_LOCK_TIMEOUT_MS in .env.example.
-      TUCANO_LOCK_TIMEOUT_MS: "${TUCANO_LOCK_TIMEOUT_MS:-5000}"
-      TUCANO_JWT_SECRET: "${TUCANO_JWT_SECRET:?TUCANO_JWT_SECRET is required and must be at least 32 bytes; copy .env.example to .env and set it}"
-      TUCANO_BOOTSTRAP_USERNAME: "${TUCANO_BOOTSTRAP_USERNAME:-admin}"
-      TUCANO_BOOTSTRAP_PASSWORD: "${TUCANO_BOOTSTRAP_PASSWORD:?TUCANO_BOOTSTRAP_PASSWORD is required; copy .env.example to .env and set it}"
+      # TATU_LOCK_TIMEOUT_MS in .env.example.
+      TATU_LOCK_TIMEOUT_MS: "${TATU_LOCK_TIMEOUT_MS:-5000}"
+      TATU_JWT_SECRET: "${TATU_JWT_SECRET:?TATU_JWT_SECRET is required and must be at least 32 bytes; copy .env.example to .env and set it}"
+      TATU_BOOTSTRAP_USERNAME: "${TATU_BOOTSTRAP_USERNAME:-admin}"
+      TATU_BOOTSTRAP_PASSWORD: "${TATU_BOOTSTRAP_PASSWORD:?TATU_BOOTSTRAP_PASSWORD is required; copy .env.example to .env and set it}"
     ports:
       - "3100:3000"
     volumes:
@@ -56,11 +58,11 @@ services:
 
   gui:
     build:
-      context: ../TucanoTestGUI
+      context: ../TatuTestGUI
       dockerfile: Dockerfile
-    image: tucano-test-gui:local
+    image: tatu-test-gui:local
     environment:
-      TUCANO_API_URL: http://api:3000
+      TATU_API_URL: http://api:3000
     ports:
       - "8080:8080"
     depends_on:

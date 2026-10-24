@@ -16,8 +16,8 @@
 //!
 //! libtest gives no order between test binaries, so recording and checking are
 //! two passes of one command — `scripts/coverage-check.sh` names the recording
-//! with `TUCANO_ROUTE_LOG` for the suites and turns the check on with
-//! `TUCANO_ROUTE_LOG_ASSERT` for this one. A run that only records says so and
+//! with `TATU_ROUTE_LOG` for the suites and turns the check on with
+//! `TATU_ROUTE_LOG_ASSERT` for this one. A run that only records says so and
 //! asserts nothing.
 
 mod common;
@@ -36,16 +36,16 @@ struct Observed {
 
 #[tokio::test]
 async fn every_documented_operation_was_served_successfully() {
-    let recording = std::env::var("TUCANO_ROUTE_LOG").ok();
-    if std::env::var_os("TUCANO_ROUTE_LOG_ASSERT").is_none() {
+    let recording = std::env::var("TATU_ROUTE_LOG").ok();
+    if std::env::var_os("TATU_ROUTE_LOG_ASSERT").is_none() {
         eprintln!(
             "route coverage: recording pass only — the suites are still writing \
              {}; run scripts/coverage-check.sh to record and check in one go",
-            recording.as_deref().unwrap_or("(no TUCANO_ROUTE_LOG)")
+            recording.as_deref().unwrap_or("(no TATU_ROUTE_LOG)")
         );
         return;
     }
-    let recording = recording.expect("TUCANO_ROUTE_LOG names the recording this check reads");
+    let recording = recording.expect("TATU_ROUTE_LOG names the recording this check reads");
 
     let observed = read_recording(&recording);
 

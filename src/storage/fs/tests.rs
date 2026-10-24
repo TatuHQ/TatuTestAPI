@@ -150,7 +150,7 @@ fn a_legacy_temporary_file_does_not_refuse_the_root() {
     fs::write(
         directory
             .path()
-            .join("test_runs/.tucano-1700000000000000000.tmp"),
+            .join("test_runs/.tatu-1700000000000000000.tmp"),
         b"{\"testRunId\": \"half-written.json\"}\n",
     )
     .expect("temporary file");
@@ -1657,7 +1657,7 @@ fn a_probe_removes_the_scratch_file_it_wrote() {
     names.sort();
     assert_eq!(
         names,
-        vec![".tucano.lock".to_owned(), "projects".to_owned()],
+        vec![".tatu.lock".to_owned(), "projects".to_owned()],
         "the writability probe left something behind"
     );
 }
@@ -1707,10 +1707,10 @@ fn an_unwritable_root_is_not_ready() {
     let privileged = OpenOptions::new()
         .write(true)
         .create_new(true)
-        .open(root.join(".tucano-privilege-check"))
+        .open(root.join(".tatu-privilege-check"))
         .is_ok();
     if privileged {
-        let _ = fs::remove_file(root.join(".tucano-privilege-check"));
+        let _ = fs::remove_file(root.join(".tatu-privilege-check"));
         restore().expect("restore permissions");
         return;
     }

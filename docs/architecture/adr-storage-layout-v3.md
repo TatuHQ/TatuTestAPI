@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-15
-- **Issue:** [#215](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215)
+- **Issue:** [#215](https://github.com/TatuHQ/TatuTestAPI/issues/215)
 - **Deciders:** repository owner (ECiurleo)
 - **Supersedes:** the three flat root collections of the v2 layout recorded under *Hierarchy and
   Real-Home Storage Plan (Issue #65)* in
@@ -11,7 +11,7 @@
 
 ## Context
 
-Issue [#215](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215) is the repository's only
+Issue [#215](https://github.com/TatuHQ/TatuTestAPI/issues/215) is the repository's only
 `priority:P0` ticket and its whole body is its title:
 
 > `test_runs/<id>.json` / `milestones/<id>.json` / `configurations/<id>.json` — should be stored
@@ -109,7 +109,7 @@ wire surface is the real cost — and Issue #66 already established the pattern 
 | **Global reads** | `AGENTS.md`: listing and retrieval search the whole tree, so an entity is findable regardless of home |
 | **No new disclosure** | authorisation never weaker than today's (`access.rs` resolves the projects behind every request) |
 | **No silent wrong answer** | the failure mode this repository's contracts repeatedly refuse: a document that is present but invisible, or a report that quietly under-counts |
-| **Trait shape stable** | `Repository`'s signatures unchanged, so [#182](https://github.com/TucanoTechnology/TucanoTestAPI/issues/182) and the accepted [object-storage ADR](./adr-object-storage.md) are not disturbed |
+| **Trait shape stable** | `Repository`'s signatures unchanged, so [#182](https://github.com/TatuHQ/TatuTestAPI/issues/182) and the accepted [object-storage ADR](./adr-object-storage.md) are not disturbed |
 
 ### Option A — Folder home only, project-scoped creation, global reads (chosen)
 
@@ -185,8 +185,8 @@ per-resource subfolder, and are created through a project-scoped route. Their id
 unique per project. Their document shapes do not change at all.
 
 ```text
-TUCANO_DATA_DIR/
-├── .tucano.lock
+TATU_DATA_DIR/
+├── .tatu.lock
 ├── auth/…                                 unchanged
 └── projects/
     └── <project>/
@@ -297,7 +297,7 @@ It gains one refusal: a reference that resolves to **two or more** runs answers 
 rather than picking one, because a silently arbitrary choice is a wrong progress number. The
 separate, pre-existing hazard that an *undeserialisable* run is skipped
 (`let Ok(run) = … else { continue }`) is **not** in scope here; it belongs to the format-version
-reader check of [#98](https://github.com/TucanoTechnology/TucanoTestAPI/issues/98), and layout v3
+reader check of [#98](https://github.com/TatuHQ/TatuTestAPI/issues/98), and layout v3
 does not make it worse — a run that moved is *absent*, not unreadable.
 
 ### Decision 5 — configurations become per-project resources
@@ -376,7 +376,7 @@ stay global, and a retired flat creation route stays registered to explain itsel
   deletes, so the route its own conflict message recommends can actually delete one home at a time.)
 - The parent-scoped lists publish **no query parameters** and answer a bare sorted id array, exactly
   like `GET /projects/{id}/test_suites`. `?filter=`, `?tags=` and `?configuration=` remain on the
-  global scans only. *Amended by [Issue #293](https://github.com/TucanoTechnology/TucanoTestAPI/issues/293):*
+  global scans only. *Amended by [Issue #293](https://github.com/TatuHQ/TatuTestAPI/issues/293):*
   the project-scoped suite, case and run listings now serve the same `?filter=` and `?tags=` (and,
   for runs, `?configuration=`) the global scans do, so a listing is narrowed where it is read; the
   parent-scoped milestone and configuration listings and `GET /test_suites/{id}/test_cases` are
@@ -471,7 +471,7 @@ fixtures:
   either** — an operator's data is not this service's to destroy.
 - `FileRepository::new` **fails** when a legacy root collection still holds documents. The check is
   read-only, runs once, and counts `*.json` entries in `<data>/test_runs`, `<data>/milestones` and
-  `<data>/configurations`, ignoring the atomic-write temporary pattern `.tucano-*.tmp`. The error is
+  `<data>/configurations`, ignoring the atomic-write temporary pattern `.tatu-*.tmp`. The error is
   an `io::Error` that `src/main.rs` already propagates (`FileRepository::new(data_dir)?`), so the
   process aborts before it binds a port. Message, naming relative directories only and no absolute
   path:
@@ -555,7 +555,7 @@ fixtures:
 
 ### Positive
 
-- The on-disk tree reads like the domain for all six resources; `TUCANO_DATA_DIR` has one root
+- The on-disk tree reads like the domain for all six resources; `TATU_DATA_DIR` has one root
   collection instead of four.
 - Deleting a project removes its runs, milestones and configurations with it, through the
   `remove_dir_all` cascade that already exists — today they survive their project.
@@ -570,7 +570,7 @@ fixtures:
 - **The wire contract breaks for creation.** `POST /test_runs`, `POST /milestones` and
   `POST /configurations` stop creating. The GUI must move to the parent-scoped routes; it is an
   equal citizen, so this is a coordinated change with
-  [TucanoTestGUI](https://github.com/TucanoTechnology/TucanoTestGUI), not a server-only one.
+  [TatuTestGUI](https://github.com/TatuHQ/TatuTestGUI), not a server-only one.
 - **Three published global scans leave `openapi.json`** while remaining served, exactly as
   `GET /test_suites` did. A generated client loses them and must enumerate projects instead.
 - **`409` becomes possible on run, milestone and configuration document routes** that could never
@@ -586,23 +586,23 @@ fixtures:
 ### Not done here
 
 - The `milestone_progress` skip-on-undeserialisable-run hazard — tracked by
-  [#98](https://github.com/TucanoTechnology/TucanoTestAPI/issues/98).
+  [#98](https://github.com/TatuHQ/TatuTestAPI/issues/98).
 - Placement (`mode: copy|move`) for runs, milestones or configurations.
 - Environment-matrix semantics for configurations — still
-  [#34](https://github.com/TucanoTechnology/TucanoTestAPI/issues/34) and
-  [#51](https://github.com/TucanoTechnology/TucanoTestAPI/issues/51).
+  [#34](https://github.com/TatuHQ/TatuTestAPI/issues/34) and
+  [#51](https://github.com/TatuHQ/TatuTestAPI/issues/51).
 
 ## Sequencing against other tickets
 
 | Ticket | Relationship |
 | --- | --- |
-| [#182](https://github.com/TucanoTechnology/TucanoTestAPI/issues/182) — extract a backend-agnostic `Repository` boundary | **Not revived and not blocked.** This ADR changes the *meaning* of the existing `parent` argument, not the trait's shape, and the [object-storage ADR](./adr-object-storage.md) already cancelled #182 on the grounds that `Repository` stays an internal seam. Note that #182–#185 are still **open** although that ADR cancelled them; closing them is housekeeping for that ADR, out of scope here. |
-| [#183](https://github.com/TucanoTechnology/TucanoTestAPI/issues/183)–[#185](https://github.com/TucanoTechnology/TucanoTestAPI/issues/185) — S3 backend, configuration, conformance tests | Cancelled by the object-storage ADR; layout v3 does not touch that decision. Were an object-store backend ever proposed, one more project-prefixed key segment is no additional obstacle. |
-| [#186](https://github.com/TucanoTechnology/TucanoTestAPI/issues/186) — document the storage backends | Re-scoped to the mirror option by the object-storage ADR. If pursued, it must describe layout v3, not v2. |
-| [#98](https://github.com/TucanoTechnology/TucanoTestAPI/issues/98) / [#101](https://github.com/TucanoTechnology/TucanoTestAPI/issues/101) — format versioning and rollback drills | Unaffected in substance: `SUPPORTED_FORMAT_VERSION` stays `1`. #98's stored-path table changes (this ADR's second deliverable), and #101's drills must use v3 paths. |
-| [#169](https://github.com/TucanoTechnology/TucanoTestAPI/issues/169) / [#195](https://github.com/TucanoTechnology/TucanoTestAPI/issues/195) — seed dataset and its Compose wiring | **Directly dependent.** `scripts/seed.mjs`, `teardown.mjs`, `clear-data.mjs`, `smoke.sh` and `docs/testing/seed-dataset-spec.md` all create these three resources without a project today and must follow the five-edit order `README.md` prescribes. |
-| [#176](https://github.com/TucanoTechnology/TucanoTestAPI/issues/176)–[#178](https://github.com/TucanoTechnology/TucanoTestAPI/issues/178) — security audits | Should be run against the post-v3 surface; the authorisation rules this ADR fixes are input to the IDOR review. |
-| [#165](https://github.com/TucanoTechnology/TucanoTestAPI/issues/165) — project wiki | The three wiki pages named in *Decision 5* change; a wiki task in flight must rebase on them. |
+| [#182](https://github.com/TatuHQ/TatuTestAPI/issues/182) — extract a backend-agnostic `Repository` boundary | **Not revived and not blocked.** This ADR changes the *meaning* of the existing `parent` argument, not the trait's shape, and the [object-storage ADR](./adr-object-storage.md) already cancelled #182 on the grounds that `Repository` stays an internal seam. Note that #182–#185 are still **open** although that ADR cancelled them; closing them is housekeeping for that ADR, out of scope here. |
+| [#183](https://github.com/TatuHQ/TatuTestAPI/issues/183)–[#185](https://github.com/TatuHQ/TatuTestAPI/issues/185) — S3 backend, configuration, conformance tests | Cancelled by the object-storage ADR; layout v3 does not touch that decision. Were an object-store backend ever proposed, one more project-prefixed key segment is no additional obstacle. |
+| [#186](https://github.com/TatuHQ/TatuTestAPI/issues/186) — document the storage backends | Re-scoped to the mirror option by the object-storage ADR. If pursued, it must describe layout v3, not v2. |
+| [#98](https://github.com/TatuHQ/TatuTestAPI/issues/98) / [#101](https://github.com/TatuHQ/TatuTestAPI/issues/101) — format versioning and rollback drills | Unaffected in substance: `SUPPORTED_FORMAT_VERSION` stays `1`. #98's stored-path table changes (this ADR's second deliverable), and #101's drills must use v3 paths. |
+| [#169](https://github.com/TatuHQ/TatuTestAPI/issues/169) / [#195](https://github.com/TatuHQ/TatuTestAPI/issues/195) — seed dataset and its Compose wiring | **Directly dependent.** `scripts/seed.mjs`, `teardown.mjs`, `clear-data.mjs`, `smoke.sh` and `docs/testing/seed-dataset-spec.md` all create these three resources without a project today and must follow the five-edit order `README.md` prescribes. |
+| [#176](https://github.com/TatuHQ/TatuTestAPI/issues/176)–[#178](https://github.com/TatuHQ/TatuTestAPI/issues/178) — security audits | Should be run against the post-v3 surface; the authorisation rules this ADR fixes are input to the IDOR review. |
+| [#165](https://github.com/TatuHQ/TatuTestAPI/issues/165) — project wiki | The three wiki pages named in *Decision 5* change; a wiki task in flight must rebase on them. |
 
 **Order:** this ADR (S1) → storage layout (S2) → domain (S3) → HTTP and authorisation (S4) →
 legacy-layout refusal (S8) → contract (S6) and tests (S7) → prose, wiki and dataset (S5, S9). S2–S9
@@ -610,7 +610,7 @@ are separate tickets; none of them may reopen a decision recorded here.
 
 ## Sub-task decomposition
 
-Every row is a GitHub sub-issue of [#215](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215).
+Every row is a GitHub sub-issue of [#215](https://github.com/TatuHQ/TatuTestAPI/issues/215).
 "Depends on" is a merge order, not a suggestion: a row whose dependency has not landed cannot satisfy
 its Definition of Done.
 
@@ -623,16 +623,16 @@ its Definition of Done.
 | S5 | Contracts and prose | `README.md` (storage tree, HTTP API table, the Authentication sentences quoted in *Decision 5*, property 3), `docs/contracts/api-compatibility.md` v2-layout section, `docs/deployment/deployment-guide.md` legacy-layout recipe, `docs/wiki/{test-runs-and-results,milestones,tags-and-configurations,projects-suites-and-cases}.md` | `model:docs` | M | S4 |
 | S6 | OpenAPI | `openapi.json` and `swagger.html`: three path keys removed, six added, 71 operations, the `operationId`s, tags and response sets of *Decision 6* | `model:mid` | M | S4 |
 | S7 | Tests | `tests/{service,runs,milestones,configurations,reports,auth,common/mod}.rs` and the layout/fs unit tests: project-scoped creation, per-project uniqueness and `409`, retired-route `400`s, authorisation union, report exactness, the new `71` pin | `model:mid` | L | S4, S6 |
-| S8 | Storage startup | `FileRepository::new`: create only `projects/`, detect a legacy flat layout, refuse with the exact message of *Decision 8*, never delete anything; tests for empty legacy dirs, populated ones, and `.tucano-*.tmp` files | `model:mid` | S | S2 |
+| S8 | Storage startup | `FileRepository::new`: create only `projects/`, detect a legacy flat layout, refuse with the exact message of *Decision 8*, never delete anything; tests for empty legacy dirs, populated ones, and `.tatu-*.tmp` files | `model:mid` | S | S2 |
 | S9 | Seed dataset | `docs/testing/seed-dataset-spec.md` (§1 rows 10–13, 18–20; §2 target tree; §3 steps 1, 6, 9; §3 step 12 assertions) then `scripts/{seed,teardown,clear-data}.mjs` and `scripts/smoke.sh`, in the five-edit order `README.md` prescribes | `model:mid` | M | S4 |
 
 ## References
 
-- [Issue #215 — this decision](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215)
-- [Issue #65 — Hierarchy and real-home storage (layout v2)](https://github.com/TucanoTechnology/TucanoTestAPI/issues/65),
-  [Issue #66 — real-parent creation](https://github.com/TucanoTechnology/TucanoTestAPI/issues/66),
-  [Issue #67 — copy/move inclusion](https://github.com/TucanoTechnology/TucanoTestAPI/issues/67),
-  [Issue #69 — configurations activation](https://github.com/TucanoTechnology/TucanoTestAPI/issues/69)
+- [Issue #215 — this decision](https://github.com/TatuHQ/TatuTestAPI/issues/215)
+- [Issue #65 — Hierarchy and real-home storage (layout v2)](https://github.com/TatuHQ/TatuTestAPI/issues/65),
+  [Issue #66 — real-parent creation](https://github.com/TatuHQ/TatuTestAPI/issues/66),
+  [Issue #67 — copy/move inclusion](https://github.com/TatuHQ/TatuTestAPI/issues/67),
+  [Issue #69 — configurations activation](https://github.com/TatuHQ/TatuTestAPI/issues/69)
 - [`AGENTS.md`](../../AGENTS.md) — Core Project Philosophy (storage mirrors the organisation, one real
   home, global reads)
 - [`README.md`](../../README.md) — Storage concept, HTTP API, Authentication

@@ -6,12 +6,12 @@
 
 ## Decision frame
 
-Rust was chosen for the service core because Tucano Test is a portable, file-based system exposed to untrusted HTTP input. Rust reduces memory-safety risk at compile time while retaining the project goals of inspectable JSON files, a database-free deployment, API/GUI parity, and container portability.
+Rust was chosen for the service core because TatuTest is a portable, file-based system exposed to untrusted HTTP input. Rust reduces memory-safety risk at compile time while retaining the project goals of inspectable JSON files, a database-free deployment, API/GUI parity, and container portability.
 
 ## Target architecture
 
 ```text
-GUI (TucanoTestGUI)
+GUI (TatuTestGUI)
     |
     | HTTP/JSON API
     v
@@ -108,5 +108,5 @@ used by `main.rs` and the tests.
 The service core is accepted once it has endpoint and file-format compatibility fixtures, passes the security and failure-mode suite, documents all deviations, demonstrates bounded resource behaviour, and can be deployed and rolled back using the existing volume-mount model.
 
 Outstanding against these criteria: compatibility fixtures, property/fuzz testing, and benchmarking.
-Authentication and authorization landed in [#130](https://github.com/TucanoTechnology/TucanoTestAPI/issues/130),
+Authentication and authorization landed in [#130](https://github.com/TatuHQ/TatuTestAPI/issues/130),
 enforced at the request-validation boundary this document describes.

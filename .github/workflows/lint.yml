@@ -55,9 +55,9 @@ jobs:
       # see the note in the workflows job above and issue #123.
       options: --dns 8.8.8.8 --dns 1.1.1.1
       volumes:
-        - tucanotestapi-cargo-registry:/usr/local/cargo/registry
-        - tucanotestapi-cargo-git:/usr/local/cargo/git
-        - tucanotestapi-rustup:/usr/local/rustup
+        - tatutestapi-cargo-registry:/usr/local/cargo/registry
+        - tatutestapi-cargo-git:/usr/local/cargo/git
+        - tatutestapi-rustup:/usr/local/rustup
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install required components
@@ -84,9 +84,9 @@ jobs:
       # see the note in the workflows job above and issue #123.
       options: --dns 8.8.8.8 --dns 1.1.1.1
       volumes:
-        - tucanotestapi-cargo-registry:/usr/local/cargo/registry
-        - tucanotestapi-cargo-git:/usr/local/cargo/git
-        - tucanotestapi-rustup:/usr/local/rustup
+        - tatutestapi-cargo-registry:/usr/local/cargo/registry
+        - tatutestapi-cargo-git:/usr/local/cargo/git
+        - tatutestapi-rustup:/usr/local/rustup
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install required components

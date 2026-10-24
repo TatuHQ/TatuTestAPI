@@ -53,12 +53,12 @@ async fn a_lock_held_by_another_process_times_out_as_503_not_412() {
     seed(&app).await;
 
     // A second opener of the advisory lock, held across the request: exactly
-    // the busy-volume shape `TUCANO_LOCK_TIMEOUT_MS` exists to answer.
+    // the busy-volume shape `TATU_LOCK_TIMEOUT_MS` exists to answer.
     let guard = OpenOptions::new()
         .create(true)
         .truncate(false)
         .write(true)
-        .open(directory.path().join(".tucano.lock"))
+        .open(directory.path().join(".tatu.lock"))
         .expect("lock file");
     guard.lock_exclusive().expect("hold the lock");
 
@@ -162,7 +162,7 @@ async fn a_parked_writer_leaves_the_executor_serving_health() {
         .create(true)
         .truncate(false)
         .write(true)
-        .open(directory.path().join(".tucano.lock"))
+        .open(directory.path().join(".tatu.lock"))
         .expect("lock file");
     guard.lock_exclusive().expect("hold the lock");
 

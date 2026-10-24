@@ -18,7 +18,7 @@ use std::{fs, path::PathBuf};
 use axum::http::StatusCode;
 use common::{get, send_json};
 use serde_json::{Value, json};
-use tucano_test::repository::{FileRepository, Repository, Resource};
+use tatu_test::repository::{FileRepository, Repository, Resource};
 
 fn fixture_tree() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/data")
@@ -70,7 +70,7 @@ fn the_committed_volume_round_trips_through_todays_reader_and_writer() {
     let suite = repository
         .read_at(
             Resource::Suites,
-            Some(&tucano_test::storage::Parent::Project(
+            Some(&tatu_test::storage::Parent::Project(
                 "fixture-app.json".into(),
             )),
             "release-suites.json",
@@ -80,7 +80,7 @@ fn the_committed_volume_round_trips_through_todays_reader_and_writer() {
     let run = repository
         .read_at(
             Resource::Runs,
-            Some(&tucano_test::storage::Parent::Project(
+            Some(&tatu_test::storage::Parent::Project(
                 "fixture-app.json".into(),
             )),
             "release-1.json",
@@ -94,7 +94,7 @@ fn the_committed_volume_round_trips_through_todays_reader_and_writer() {
     let milestone = repository
         .read_at(
             Resource::Milestones,
-            Some(&tucano_test::storage::Parent::Project(
+            Some(&tatu_test::storage::Parent::Project(
                 "fixture-app.json".into(),
             )),
             "ga.json",
@@ -104,7 +104,7 @@ fn the_committed_volume_round_trips_through_todays_reader_and_writer() {
     let configuration = repository
         .read_at(
             Resource::Configurations,
-            Some(&tucano_test::storage::Parent::Project(
+            Some(&tatu_test::storage::Parent::Project(
                 "fixture-app.json".into(),
             )),
             "chrome.json",
@@ -113,7 +113,7 @@ fn the_committed_volume_round_trips_through_todays_reader_and_writer() {
     assert_eq!(configuration["browser"], "chrome");
 
     // Revision snapshot and attachment: served shapes parse from disk.
-    let suite_parent = tucano_test::storage::Parent::Suite {
+    let suite_parent = tatu_test::storage::Parent::Suite {
         project: "fixture-app.json".into(),
         suite: "release-suites.json".into(),
     };
@@ -126,12 +126,12 @@ fn the_committed_volume_round_trips_through_todays_reader_and_writer() {
         .expect("fixture attachment reads");
     assert_eq!(attachment.len(), 22);
 
-    // The volume holds no `.tucano-*.tmp` leftovers after the round trip.
+    // The volume holds no `.tatu-*.tmp` leftovers after the round trip.
     let litter: Vec<_> = walk(&data)
         .into_iter()
         .filter(|path| {
             path.file_name()
-                .map(|n| n.to_string_lossy().starts_with(".tucano-"))
+                .map(|n| n.to_string_lossy().starts_with(".tatu-"))
                 .unwrap_or(false)
         })
         .collect();

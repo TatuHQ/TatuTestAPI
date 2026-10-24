@@ -30,9 +30,9 @@ use crate::{api::request_id, domain::DomainError};
 fn challenge(code: &str) -> HeaderValue {
     let value = match code {
         "invalid_token" | "token_expired" => {
-            "Bearer realm=\"Tucano Test API\", error=\"invalid_token\""
+            "Bearer realm=\"TatuTest API\", error=\"invalid_token\""
         }
-        _ => "Bearer realm=\"Tucano Test API\"",
+        _ => "Bearer realm=\"TatuTest API\"",
     };
     HeaderValue::from_static(value)
 }
@@ -261,23 +261,23 @@ mod tests {
         let cases = [
             (
                 DomainError::missing_token(),
-                "Bearer realm=\"Tucano Test API\"",
+                "Bearer realm=\"TatuTest API\"",
             ),
             (
                 DomainError::invalid_credentials(),
-                "Bearer realm=\"Tucano Test API\"",
+                "Bearer realm=\"TatuTest API\"",
             ),
             (
                 DomainError::invalid_refresh_token(),
-                "Bearer realm=\"Tucano Test API\"",
+                "Bearer realm=\"TatuTest API\"",
             ),
             (
                 DomainError::invalid_token(),
-                "Bearer realm=\"Tucano Test API\", error=\"invalid_token\"",
+                "Bearer realm=\"TatuTest API\", error=\"invalid_token\"",
             ),
             (
                 DomainError::token_expired(),
-                "Bearer realm=\"Tucano Test API\", error=\"invalid_token\"",
+                "Bearer realm=\"TatuTest API\", error=\"invalid_token\"",
             ),
         ];
 

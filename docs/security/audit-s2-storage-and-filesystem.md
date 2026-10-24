@@ -1,13 +1,13 @@
 # Security Audit S2 — Storage and filesystem invariants (Issue #177)
 
-Issue: [#177](https://github.com/TucanoTechnology/TucanoTestAPI/issues/177). Parent epic:
-[#166](https://github.com/TucanoTechnology/TucanoTestAPI/issues/166) — *Carry out security audit*.
+Issue: [#177](https://github.com/TatuHQ/TatuTestAPI/issues/177). Parent epic:
+[#166](https://github.com/TatuHQ/TatuTestAPI/issues/166) — *Carry out security audit*.
 
 This report runs surface **S2** of [audit-scope.md](audit-scope.md): *"Path confinement and symlink
 handling, atomicity and durability of writes, the advisory lock, attachment and revision storage,
 file permissions on documents and on the authentication store, and the on-disk tree as an integrity
 boundary."* It carries findings only; nothing here is fixed. Remediation belongs to the tickets
-[#180](https://github.com/TucanoTechnology/TucanoTestAPI/issues/180) raises.
+[#180](https://github.com/TatuHQ/TatuTestAPI/issues/180) raises.
 
 > **Status of this file: the finished S2 report.** Every sub-task the design names in
 > [audit-design-176-178.md](audit-design-176-178.md) §"#177" §3 has run and has a result: the seven
@@ -60,7 +60,7 @@ boundary."* It carries findings only; nothing here is fixed. Remediation belongs
   owes no further variants, and the paragraph after it states what each finished sub-task does not
   show.
 - **Throwaway stack:** re-provisioned for the S2-15 container arm with every build step `CACHED` from
-  the pinned revision, and **retained** at `tucano-test-audit-177:c5e9943` for the rest of the audit; the
+  the pinned revision, and **retained** at `tatu-test-audit-177:c5e9943` for the rest of the audit; the
   earlier tear-down and the re-provisioning are both recorded in [§7](#7-tear-down-step-7). The S2-8
   pair is a separate stack on a disk-backed directory, and the two S2-12 stacks (`audit-177-auth-1`
   with authentication on, `audit-177-ttl-1` with a one-second access-token TTL) are a third — see
@@ -74,8 +74,8 @@ boundary."* It carries findings only; nothing here is fixed. Remediation belongs
 | Repository revision audited | `c5e99431389854368ab3a8e07003622f34dfdd21` |
 | `origin/main` at audit time | `c5e99431389854368ab3a8e07003622f34dfdd21` (merge base, so the report's tree is the audited tree) |
 | `Cargo.lock` SHA-256 | `4cddc67a699e87847a5a1f9d5cba12c3d32f6c80c83e1c11459fd970064f78ab` |
-| Built image id (the audited artifact) | `sha256:8db4b338b31c36d55fa168962c5d9522466a959c5bb86512636c44e41a173`, tagged `tucano-test-audit-177:c5e9943` |
-| Audit worktree | `/home/emanuelec/Documents/Github/Tucano-Test-eco`, branch `eco/177-storage-audit`, working tree clean at the seeded revision |
+| Built image id (the audited artifact) | `sha256:8db4b338b31c36d55fa168962c5d9522466a959c5bb86512636c44e41a173`, tagged `tatu-test-audit-177:c5e9943` |
+| Audit worktree | `/home/emanuelec/Documents/Github/Tatu-Test-eco`, branch `eco/177-storage-audit`, working tree clean at the seeded revision |
 | Throwaway data directory | `/tmp/audit-177/data`, bind-mounted at `/data`; **host filesystem `tmpfs`** (host `/tmp` is a tmpfs mount) |
 | Container's view of the same directory | `stat -f -c %T /data` → `tmpfs`; `stat -c '%a %n'` → `777 /data`, owner `root:root` |
 
@@ -99,16 +99,16 @@ hoped for:
   `stat -f -c %T /data` → `ext2/ext3`. POSIX permission bits and symlink handling behave the same on
   both, so the *permission* results transfer; durability and `flock`-under-overlay results would not,
   and no such result is claimed in this checkpoint.
-- **Authentication was off in the audited arm.** No `TUCANO_JWT_SECRET` was supplied, so the service
+- **Authentication was off in the audited arm.** No `TATU_JWT_SECRET` was supplied, so the service
   ran in its default unauthenticated mode (see §2.1, note 6). Every request below was made
   without credentials. Where a finding's impact depends on that, the finding says so.
 
 ## 2. Throwaway target (step 2)
 
 One scratch Compose project, `audit-177`, built from the pinned revision, plus the `docker run` arms
-the sub-tasks needed. The operator's long-lived instance (Compose project `tucano-test`) was never a
-target: `tucano-test-api-1` reported `Up 34 hours` with `0.0.0.0:3100->3000/tcp, [::]:3100->3000/tcp`,
-running image `tucano-test-api:local` = `8f075af3c2e7` (container `.Image` `13f10c0e9208`) before,
+the sub-tasks needed. The operator's long-lived instance (Compose project `tatu-test`) was never a
+target: `tatu-test-api-1` reported `Up 34 hours` with `0.0.0.0:3100->3000/tcp, [::]:3100->3000/tcp`,
+running image `tatu-test-api:local` = `8f075af3c2e7` (container `.Image` `13f10c0e9208`) before,
 during, and after every probe in this checkpoint.
 
 ```yaml
@@ -116,11 +116,11 @@ during, and after every probe in this checkpoint.
 services:
   api:
     build:
-      context: /home/emanuelec/Documents/Github/Tucano-Test-eco
+      context: /home/emanuelec/Documents/Github/Tatu-Test-eco
       dockerfile: Dockerfile
-    image: tucano-test-audit-177:c5e9943
+    image: tatu-test-audit-177:c5e9943
     environment:
-      TUCANO_DATA_DIR: /data
+      TATU_DATA_DIR: /data
       PORT: 3000
     ports:
       - "3320:3000"
@@ -143,27 +143,27 @@ auditor's.
    prefix), so the all-interfaces publish is preserved. F-177-1 does not depend on this.
 2. **Build context:** `.` → the worktree path. The container contract (`/data`, `PORT=3000`) is
    untouched.
-3. **Image tag:** `tucano-test-api:local` → `tucano-test-audit-177:c5e9943`. Deliberate: the audit
+3. **Image tag:** `tatu-test-api:local` → `tatu-test-audit-177:c5e9943`. Deliberate: the audit
    rebuilds the image without ever retagging the name the operator's live container holds.
 4. **Data directory:** `./data:/data` → `/tmp/audit-177/data:/data`, a directory this audit created
    and deletes (§7). It is never `./data` and never the operator's volume.
-5. **Data directory mode `0777`.** The container process is uid 10001 (`tucano`), while the host user
+5. **Data directory mode `0777`.** The container process is uid 10001 (`tatu`), while the host user
    that created the directory is uid 1000, so a default `mkdir` mode would not be writable by the
    service. `0777` is therefore the auditor's provisioning step, not a property of the repository —
    **but see F-177-1, where the operator's real `./data` is itself `drwxrwxrwx`**, so this deviation
    matches the deployment rather than departing from it. The report states the mode of both, and
    F-177-1's impact paragraph does not rest on the auditor's own chmod.
 6. **Authentication off — recorded here, but *not* a deviation from the shipped Compose file.** The
-   audited arm supplies no `TUCANO_JWT_SECRET` and sets no `TUCANO_AUTH_REQUIRED`; the shipped
+   audited arm supplies no `TATU_JWT_SECRET` and sets no `TATU_AUTH_REQUIRED`; the shipped
    `docker-compose.yml` sets no auth variable either, and the service's own default is off
-   (`src/auth/config.rs:130–133`: an absent `TUCANO_AUTH_REQUIRED` resolves to `false`; pinned
+   (`src/auth/config.rs:130–133`: an absent `TATU_AUTH_REQUIRED` resolves to `false`; pinned
    `README.md:218` documents the `false` default and that "when off, every guard returns and the API
    is anonymous"; `docs/wiki/api-and-authentication.md` states "**Authentication is off by default.**").
    So this arm *is* the shipped configuration rather than a departure from it, and every finding that
    leans on the default's reachability rests on the shipped file rather than on an auditor's choice.
    The default configuration is intended to be audited this way (`audit-scope.md` §5's escalation rule
    turns on the *default* configuration), and every finding states the setting explicitly. An
-   auth-enabled arm — `TUCANO_AUTH_REQUIRED=true` with a `TUCANO_JWT_SECRET` of at least the minimum
+   auth-enabled arm — `TATU_AUTH_REQUIRED=true` with a `TATU_JWT_SECRET` of at least the minimum
    length and one seeded account — is still required before the `Unauthenticated` and `Forbidden`
    error variants (S2-12) and the auth-store permission call site (`src/auth/store.rs:405`, F-177-1)
    may be described as measured; both are carried in §5.
@@ -224,19 +224,19 @@ not that surface.
 | Site | Enclosing item | Mutation | Target comes from |
 | --- | --- | --- | --- |
 | `src/storage/fs.rs:30` | `FileRepository::new` (`:26`) | `create_dir_all(root/<name>)` per `ROOT_DIRS` | `ROOT_DIRS` literals (`layout.rs:49`), never request data |
-| `src/storage/fs.rs:38` | `acquire_lock` (`:37`) | `OpenOptions` create `.tucano.lock` | `self.root.join(".tucano.lock")` |
-| `src/storage/fs.rs:163`, `:164`, `:165`, `:174`, `:175`, `:178` | `write_json` (`:159`) | `create_dir_all(parent of destination)`, create `.tucano-<suffix>.tmp`, `sync_all`, `rename` onto `destination`, `remove_file` of the temp on failure | `destination` = always a `self.document(...)` / `project_document_path(...)` path; the temp name is the only locally built path, and it is `<validated directory>/.tucano-<random suffix>.tmp` |
+| `src/storage/fs.rs:38` | `acquire_lock` (`:37`) | `OpenOptions` create `.tatu.lock` | `self.root.join(".tatu.lock")` |
+| `src/storage/fs.rs:163`, `:164`, `:165`, `:174`, `:175`, `:178` | `write_json` (`:159`) | `create_dir_all(parent of destination)`, create `.tatu-<suffix>.tmp`, `sync_all`, `rename` onto `destination`, `remove_file` of the temp on failure | `destination` = always a `self.document(...)` / `project_document_path(...)` path; the temp name is the only locally built path, and it is `<validated directory>/.tatu-<random suffix>.tmp` |
 | `src/storage/fs.rs:358`, `:362`, `:366` | `place_locked` (`:325`) | `create_dir_all(to.parent())`; `rename(from → to)` for `Placement::Move`; on a failed rename `copy_dir_all` + `remove_dir_all(from)`; `Placement::Copy` calls `copy_dir_all` | `from`/`to` = `self.folder(resource, Some(<parent>), id)` (`fs.rs:76`) |
 | `src/storage/fs.rs:549`, `:551` | `delete_at` (`:546`) | `remove_dir_all(folder)` or, when the node is a document, `remove_file` | `self.folder(...)` / `self.document(...)` |
-| `src/storage/fs.rs:601`, `:607`, `:609` | `save_attachment` (`:583`) | create `.tucano-<suffix>.tmp`, `sync_all`, `remove_file` of the temp on failure | `attachment_path(...)` (`layout.rs:323`), assigned at `fs.rs:600` |
+| `src/storage/fs.rs:601`, `:607`, `:609` | `save_attachment` (`:583`) | create `.tatu-<suffix>.tmp`, `sync_all`, `remove_file` of the temp on failure | `attachment_path(...)` (`layout.rs:323`), assigned at `fs.rs:600` |
 | `src/storage/fs.rs:677` | `delete_attachment` (`:674`) | `remove_file` | `attachment_path(...)` |
 | `src/storage/fs.rs:704`, `:706`, `:712`, `:714` | `save_revision` (`:618`) | `create_dir_all(revision dir)`, create temp, `sync_all`, `remove_file` of the temp on failure | `revision_dir(...)` (`layout.rs:304`), assigned at `fs.rs:646` |
 | `src/storage/fs.rs:732` | `delete_step_attachment` (`:723`) | `remove_file` | `step_attachment_path(...)` (`layout.rs:353`), built inline at `:702`/`:732` |
-| `src/storage/fs.rs:770`, `:778` | `probe_writable` (`:768`) | create `.tucano-<suffix>.tmp` in the **root**, `remove_file` it | `root.join(format!(".tucano-{}.tmp", unique_suffix()))` — the readiness probe, no request data |
-| `src/storage/fs.rs:792` | `probe_lock` (`:791`) | `OpenOptions` create/read/write `.tucano.lock` in the root | `root.join(".tucano.lock")`; opened `truncate(false)`, so a probe never empties a held lock |
+| `src/storage/fs.rs:770`, `:778` | `probe_writable` (`:768`) | create `.tatu-<suffix>.tmp` in the **root**, `remove_file` it | `root.join(format!(".tatu-{}.tmp", unique_suffix()))` — the readiness probe, no request data |
+| `src/storage/fs.rs:792` | `probe_lock` (`:791`) | `OpenOptions` create/read/write `.tatu.lock` in the root | `root.join(".tatu.lock")`; opened `truncate(false)`, so a probe never empties a held lock |
 | `src/storage/fs.rs:856`, `:863` | `copy_dir_all` (`:855`) | `create_dir_all(to)`, `fs::copy` per entry | recursive over `fs::read_dir(from)` — names read back off the disk, not from a request; reached only from `place_locked` |
 | `src/auth/store.rs:102` | `AuthStore::new` (`:100`) | `create_dir_all(grants_dir)` | `auth_dir()`/`grants_dir()` (`:106`/`:114`) |
-| `src/auth/store.rs:136` | `AuthStore::acquire_lock` (`:135`) | `OpenOptions` create `.tucano.lock` | the auth directory |
+| `src/auth/store.rs:136` | `AuthStore::acquire_lock` (`:135`) | `OpenOptions` create `.tatu.lock` | the auth directory |
 | `src/auth/store.rs:361` | `remove_project_grants` (`:359`) | `remove_file` | `grant_path(project_id)` (`:123`) |
 | `src/auth/store.rs:399`, `:401`, `:410`, `:411`, `:414` | `write_json_atomically` (`:395`) | `create_dir_all`, create temp, `sync_all`, `rename`, `remove_file` of the temp on failure | the caller's destination, by the same atomic-write pattern as `write_json` |
 | `src/storage/layout.rs:455` | `set_private_permissions` (`:451`) | `set_permissions(0o666)` | the open write handle (`F-177-1`) |
@@ -253,14 +253,14 @@ not that surface.
    `ensure_within` `:391`, `resolve_existing_prefix` `:415`). This is the invariant the sub-task was
    written to test, and it holds at this revision.
 2. **The only paths built outside `layout.rs` are the atomic-temp names** —
-   `fs.rs:164`, `fs.rs:770`, `auth/store.rs:400` — each `<validated directory>/.tucano-<random
+   `fs.rs:164`, `fs.rs:770`, `auth/store.rs:400` — each `<validated directory>/.tatu-<random
    suffix>.tmp`. They take their directory from a builder's output and their suffix from the random
    generator, so no request data reaches them; a temporary can therefore only ever appear beside the
-   destination it is about to replace. That is also why a leftover `.tucano-*.tmp` is inert and
+   destination it is about to replace. That is also why a leftover `.tatu-*.tmp` is inert and
    unaddressable (pass entry 13's debris check, `O-177-1`).
 3. **The lock file is created by two different items in the same module** — `acquire_lock` (`:37`,
    under `O_EXCL`-style `create(true)`) and `probe_lock` (`:791`, `truncate(false)`) — which is why a
-   fresh data directory can hold a `.tucano.lock` before anything is written (`O-177-2` measures
+   fresh data directory can hold a `.tatu.lock` before anything is written (`O-177-2` measures
    `0644` there).
 4. **No path is built anywhere else in the service.** The repo-wide grep matched only three lines
    outside the three modules — `src/auth/config.rs:374`, `src/config.rs:378`, `:393` — all of them
@@ -320,31 +320,31 @@ every mutating call site, with the one deliberate exception above named rather t
     -F 'file=@/tmp/audit-177/upload.txt' -o /dev/null
 
   # The modes the service actually created.
-  docker run --rm --entrypoint sh -v /tmp/audit-177/data:/d tucano-test-audit-177:c5e9943 \
+  docker run --rm --entrypoint sh -v /tmp/audit-177/data:/d tatu-test-audit-177:c5e9943 \
     -c "find /d -printf '%M %u:%g %s %p\n' | sort"
   ```
 
 - **Observed.** Every file the service creates is mode **`0666`** (`-rw-rw-rw-`), owned by
-  `tucano:tucano` (host view `uid 110000 gid 100998`, the rootless subuid mapping of container uid
+  `tatu:tatu` (host view `uid 110000 gid 100998`, the rootless subuid mapping of container uid
   10001), and every directory is `0755`. The lock file is the sole exception, at `0644`. The full
   listing, trimmed of repeated identical rows only where noted:
 
   ```
-  -rw-r--r-- tucano:tucano 0   /d/.tucano.lock
-  -rw-rw-rw- tucano:tucano 130 /d/projects/Checkout/project.json
-  -rw-rw-rw- tucano:tucano 133 /d/projects/Checkout/TC-LOGIN-1/test-case.json
-  -rw-rw-rw- tucano:tucano 137 /d/projects/Checkout/TC-LOGIN-1/revisions/v1.json
-  -rw-rw-rw- tucano:tucano 18  /d/projects/Checkout/TC-LOGIN-1/1789534805621580870-evidence.txt
-  -rw-rw-rw- tucano:tucano 42  /d/projects/Checkout/milestones/M1.json
-  -rw-rw-rw- tucano:tucano 52  /d/projects/Checkout/configurations/Chrome.json
-  -rw-rw-rw- tucano:tucano 72  /d/projects/Checkout/Smoke/suite.json
-  -rw-rw-rw- tucano:tucano 88  /d/projects/Checkout/test_runs/Audit run.json
-  drwxr-xr-x tucano:tucano 180 /d/projects
-  drwxr-xr-x tucano:tucano 340 /d/projects/Checkout
-  drwxr-xr-x tucano:tucano 60  /d/projects/Checkout/TC-LOGIN-1
-  drwxr-xr-x tucano:tucano 60  /d/projects/Checkout/TC-LOGIN-1/revisions
-  drwxr-xr-x tucano:tucano 60  /d/auth
-  drwxr-xr-x tucano:tucano 40  /d/auth/projects
+  -rw-r--r-- tatu:tatu 0   /d/.tatu.lock
+  -rw-rw-rw- tatu:tatu 130 /d/projects/Checkout/project.json
+  -rw-rw-rw- tatu:tatu 133 /d/projects/Checkout/TC-LOGIN-1/test-case.json
+  -rw-rw-rw- tatu:tatu 137 /d/projects/Checkout/TC-LOGIN-1/revisions/v1.json
+  -rw-rw-rw- tatu:tatu 18  /d/projects/Checkout/TC-LOGIN-1/1789534805621580870-evidence.txt
+  -rw-rw-rw- tatu:tatu 42  /d/projects/Checkout/milestones/M1.json
+  -rw-rw-rw- tatu:tatu 52  /d/projects/Checkout/configurations/Chrome.json
+  -rw-rw-rw- tatu:tatu 72  /d/projects/Checkout/Smoke/suite.json
+  -rw-rw-rw- tatu:tatu 88  /d/projects/Checkout/test_runs/Audit run.json
+  drwxr-xr-x tatu:tatu 180 /d/projects
+  drwxr-xr-x tatu:tatu 340 /d/projects/Checkout
+  drwxr-xr-x tatu:tatu 60  /d/projects/Checkout/TC-LOGIN-1
+  drwxr-xr-x tatu:tatu 60  /d/projects/Checkout/TC-LOGIN-1/revisions
+  drwxr-xr-x tatu:tatu 60  /d/auth
+  drwxr-xr-x tatu:tatu 40  /d/auth/projects
   drwxrwxrwx root:root    100 /d
   ```
 
@@ -354,10 +354,10 @@ every mutating call site, with the one deliberate exception above named rather t
   likewise `-rw-rw-rw-`:
 
   ```
-  drwxrwxrwx  7 emanuelec emanuelec 4096 /home/emanuelec/Documents/Github/Tucano-Test/data
-  -rw-rw-rw- tucano:tucano 10278 /data/projects/PRJ-ECOMMERCE-STOREFRONT.json
-  -rw-rw-rw- tucano:tucano  581 /data/test_cases/TC-PAY-002/test-case.json
-  -rw-rw-rw- tucano:tucano  108 /data/test_cases/TC-CHECKOUT-001/1788912998042772317-checkout-trace.log
+  drwxrwxrwx  7 emanuelec emanuelec 4096 /home/emanuelec/Documents/Github/Tatu-Test/data
+  -rw-rw-rw- tatu:tatu 10278 /data/projects/PRJ-ECOMMERCE-STOREFRONT.json
+  -rw-rw-rw- tatu:tatu  581 /data/test_cases/TC-PAY-002/test-case.json
+  -rw-rw-rw- tatu:tatu  108 /data/test_cases/TC-CHECKOUT-001/1788912998042772317-checkout-trace.log
   ```
 
   The operational consequence, measured in the second arm rather than inferred from the mode bits: a
@@ -366,14 +366,14 @@ every mutating call site, with the one deliberate exception above named rather t
 
   ```bash
   docker run --rm --user 4242:4242 --entrypoint sh -v /tmp/audit-177/data:/d \
-    tucano-test-audit-177:c5e9943 -c '
+    tatu-test-audit-177:c5e9943 -c '
       id
       echo "--- document (0666) ---"; cat /d/projects/Checkout/project.json
       printf "TAMPERED-BY-ANOTHER-PRINCIPAL" >> /d/projects/Checkout/project.json \
         && echo "write: allowed"
       echo "--- lock file (0644) ---"
-      cat /d/.tucano.lock >/dev/null && echo "read: allowed"
-      printf x >> /d/.tucano.lock 2>/dev/null && echo "write: allowed" || echo "write: denied"'
+      cat /d/.tatu.lock >/dev/null && echo "read: allowed"
+      printf x >> /d/.tatu.lock 2>/dev/null && echo "write: allowed" || echo "write: denied"'
   ```
 
   ```
@@ -389,14 +389,14 @@ every mutating call site, with the one deliberate exception above named rather t
   --- lock file (0644) ---
   read: allowed
   write: denied
-  sh: 1: cannot create /d/.tucano.lock: Permission denied
+  sh: 1: cannot create /d/.tatu.lock: Permission denied
   ```
 
   **What this measurement does not cover, stated rather than implied:** the auth store file was *not*
   exercised. With authentication off, the service creates `/data/auth` and `/data/auth/projects` as
   empty directories and writes no store document, so `src/auth/store.rs:405`'s mode is credited by
   inspection of the call site and by the shared helper — not by an observed `0666` file. An arm with
-  `TUCANO_JWT_SECRET` set and one seeded account is required before that call site may be described as
+  `TATU_JWT_SECRET` set and one seeded account is required before that call site may be described as
   measured.
 
 - **Expected.** `AGENTS.md` (Storage Security) instructs: *"Apply restrictive file permissions and
@@ -415,7 +415,7 @@ every mutating call site, with the one deliberate exception above named rather t
   volume can already tamper with the installation, so the finding does not *create* that capability.
   What it does is allow a **weaker** position than the excluded precondition to reach the same
   tampering: read/write on the files does not require write access to the directory, ownership of it,
-  or any membership of the `tucano` group, and it applies on a host where other local accounts exist
+  or any membership of the `tatu` group, and it applies on a host where other local accounts exist
   even when the data directory itself is not world-writable. With authentication **off** (the state
   measured above), that principal can also read documents through the API without any permission on
   the volume at all — the file mode is the weaker of the two problems in that configuration, which is
@@ -462,7 +462,7 @@ every mutating call site, with the one deliberate exception above named rather t
 
   ```bash
   # Replace a stored case document with valid JSON of the wrong shape.
-  docker run --rm --entrypoint sh -v /tmp/audit-177/data:/d tucano-test-audit-177:c5e9943 -c '
+  docker run --rm --entrypoint sh -v /tmp/audit-177/data:/d tatu-test-audit-177:c5e9943 -c '
     printf "[1,2,3]" > /d/projects/Checkout/TC-COPY-1/test-case.json
     sha256sum /d/projects/Checkout/TC-COPY-1/test-case.json'
 
@@ -570,11 +570,11 @@ every mutating call site, with the one deliberate exception above named rather t
   first at the same version number, and both callers are answered `200`. The intended shape is
   visible in the same file — `save_attachment` (`fs.rs:583`) holds **one** lock from `:591` to `:614`
   across its whole file-plus-metadata read-modify-write, which is exactly what the document path does
-  not do. The advisory lock itself is `acquire_lock` (`fs.rs:37`) over `root/.tucano.lock`, and its
+  not do. The advisory lock itself is `acquire_lock` (`fs.rs:37`) over `root/.tatu.lock`, and its
   probe (`probe_lock`, `fs.rs:791`) reports it released between requests in every measurement of pass
   entry 24. The earlier checkpoint's version of this bullet said the mechanism was **inferred, not
   localised**; the inference was correct, and the chain above replaces it.
-- **Affected revision:** `c5e99431389854368ab3a8e07003622f34dfdd21` (`tucano-test-audit-177:c5e9943`).
+- **Affected revision:** `c5e99431389854368ab3a8e07003622f34dfdd21` (`tatu-test-audit-177:c5e9943`).
 - **Reproduction.** Against the throwaway stack in §2 (authentication off, host port 3320):
   1. `POST /projects {"name":"S27"}` → `201`; `POST /projects/S27.json/test_cases
      {"testCaseId":"TC-S27","title":"S27 base","expectedResult":"ok"}` → `201`.
@@ -606,7 +606,7 @@ every mutating call site, with the one deliberate exception above named rather t
   disk: **23 acknowledged writes discarded**, in 23 of the 25 rounds. One replica, the same storm →
   **all 50 `200`**, `{"title":"Q-25","version":26}`, **25** snapshots: **25 discarded, one in every
   round**. Neither arm produced a single `409` or any other refusal, no `GET` ever saw a torn or
-  interleaved document, and a walk of the whole tree found no `.tucano-*` temp file and no `*.tmp`
+  interleaved document, and a walk of the whole tree found no `.tatu-*` temp file and no `*.tmp`
   left behind. The slow-writer arm — a 1 MiB `description` racing a small `PUT`, ten attempts —
   acknowledged **20** writes and kept **11** (`"version": 12`, `v1`…`v11`): **9 of 20 discarded**,
   and in attempts 2–9 the fast writer's value was never observable even in the `GET` issued after its
@@ -642,8 +642,8 @@ every mutating call site, with the one deliberate exception above named rather t
 - **Duplicates / prerequisites:** shares its probe with S2-7 (pass entry 13 records what did *not*
   break: no corruption, no partial document). Not a duplicate of F-177-1/F-177-2. Requires two
   concurrent clients and a case that already exists. In the shipped default — authentication off, no
-  `TUCANO_AUTH_REQUIRED` set — that is any client that can reach the listener; under
-  `TUCANO_AUTH_REQUIRED=true` it is a client holding write access on that case.
+  `TATU_AUTH_REQUIRED` set — that is any client that can reach the listener; under
+  `TATU_AUTH_REQUIRED=true` it is a client holding write access on that case.
 
 **Addendum — pass entry 24, durability half closed (#423, 2026-09-27).** The acknowledged-but-
 discarded WRITE race this entry localised was fixed transactionally by #406. The entry also noted
@@ -672,7 +672,7 @@ above stays point-in-time true for revision `c5e9943`.
 - **Where:** `validate_document_id` / `validate_component` (`src/storage/layout.rs:236`, `:367`) —
   neither bounds the length — with the resulting `ENAMETOOLONG` surfacing through the storage layer
   as `DomainError::Storage`.
-- **Affected revision:** `c5e99431389854368ab3a8e07003622f34dfdd21` (`tucano-test-audit-177:c5e9943`).
+- **Affected revision:** `c5e99431389854368ab3a8e07003622f34dfdd21` (`tatu-test-audit-177:c5e9943`).
 - **Reproduction.** Create any project, then post a case whose `testCaseId` is `N` bytes of `B`:
   `for n in 254 255 256 300; do id=$(printf 'B%.0s' $(seq 1 $n)); curl -s -o /dev/null -w '%{http_code}\n'
   -X POST http://127.0.0.1:3320/projects/S24fresh.json/test_cases -H 'content-type: application/json'
@@ -722,17 +722,17 @@ above stays point-in-time true for revision `c5e9943`.
   prints the error's **`Debug`** rendering; the hand-written `Display` at `src/config.rs:183-196` —
   the impl that names `{CONFIG_FILE_ENV}` — is therefore never reached at process level, and the
   `#[derive(Debug)]` on `ConfigError` decides what an operator reads instead.
-- **Affected revision:** `c5e99431389854368ab3a8e07003622f34dfdd21` (`tucano-test-audit-177:c5e9943`).
+- **Affected revision:** `c5e99431389854368ab3a8e07003622f34dfdd21` (`tatu-test-audit-177:c5e9943`).
 - **Reproduction.** With each fixture bind-mounted read-only at the path the environment variable
   names, one probe per input:
 
   ```text
   for f in config-unknown-key config-bad-version config-malformed; do
-    docker run --rm -v /tmp/audit-177/$f.json:/etc/tucano/config.json:ro \
-      -e TUCANO_CONFIG_FILE=/etc/tucano/config.json tucano-test-audit-177:c5e9943 \
+    docker run --rm -v /tmp/audit-177/$f.json:/etc/tatu/config.json:ro \
+      -e TATU_CONFIG_FILE=/etc/tatu/config.json tatu-test-audit-177:c5e9943 \
       >out-$f.stdout 2>out-$f.stderr; echo "$f rc=$?"
   done
-  docker run --rm -e TUCANO_CONFIG_FILE=/etc/tucano/absent.json tucano-test-audit-177:c5e9943 \
+  docker run --rm -e TATU_CONFIG_FILE=/etc/tatu/absent.json tatu-test-audit-177:c5e9943 \
     >out-missing.stdout 2>out-missing.stderr; echo "missing rc=$?"
   ```
 
@@ -746,14 +746,14 @@ above stays point-in-time true for revision `c5e9943`.
   Error: Malformed { detail: "EOF while parsing an object at line 4 column 0" }
   ```
 
-  `TUCANO_CONFIG_FILE` appears in **none** of the four, and the unreadable-file case names no path
+  `TATU_CONFIG_FILE` appears in **none** of the four, and the unreadable-file case names no path
   either, so an operator reading the failure cannot tell which setting was read or which file it
   resolved to. The rendering that *does* name the setting is unit-tested and green —
   `config::tests::an_unreadable_file_refuses_to_start_without_naming_the_path` asserts
   `rendered.contains(CONFIG_FILE_ENV)` — so the tested rendering is the one no operator ever sees: the
   test calls `Display` directly while the process reaches `Debug` implicitly through `Termination`.
 - **Expected.** The refusal should reach the console as the path-free, value-free text `Display`
-  already produces (for the unreadable case, text naming `TUCANO_CONFIG_FILE`), so the module's
+  already produces (for the unreadable case, text naming `TATU_CONFIG_FILE`), so the module's
   documented contract and the design probe's "names the setting" hold at the level where the operator
   actually reads them.
 - **Impact.** Diagnostic only, yet it inverts the boundary's purpose: the refusal is the one moment at
@@ -763,7 +763,7 @@ above stays point-in-time true for revision `c5e9943`.
   notice the difference, so the defect is invisible to the test suite that was written to prevent it.
 - **Suggested fix.** Render with `Display` before exiting — e.g. catch the error at `main` and print
   `{e}` to stderr, or give `ConfigError` a hand-written `Debug` that forwards to `Display` — and add a
-  **process-level** test that runs the binary with a missing file and asserts `TUCANO_CONFIG_FILE` in
+  **process-level** test that runs the binary with a missing file and asserts `TATU_CONFIG_FILE` in
   stderr, since the in-process unit test cannot reach the rendering the process chooses. The audit
   recommends the change and does not make it.
 - **CWE:** no clean CWE applies, and it is recorded that way rather than forced onto a
@@ -792,7 +792,7 @@ above stays point-in-time true for revision `c5e9943`.
   re-emitted. serde quotes the offending scalar when its JSON type contradicts the field's declared
   type (`invalid type: string "…", expected a boolean`); its other messages quote only the *key*
   (`unknown field \`jwt_secrett\``) or a position.
-- **Affected revision:** `c5e99431389854368ab3a8e07003622f34dfdd21` (`tucano-test-audit-177:c5e9943`).
+- **Affected revision:** `c5e99431389854368ab3a8e07003622f34dfdd21` (`tatu-test-audit-177:c5e9943`).
 - **Reproduction.** A sentinel value typed into the wrong field with the wrong type, and three
   controls in which the same sentinel sits in a field whose type matches while the failure is provoked
   elsewhere:
@@ -800,8 +800,8 @@ above stays point-in-time true for revision `c5e9943`.
   ```text
   printf '%s' '{"version":1,"auth_required":"SENTINEL-audit-177-wrong-type"}' \
     >/tmp/audit-177/config-wrong-type.json
-  docker run --rm -v /tmp/audit-177/config-wrong-type.json:/etc/tucano/config.json:ro \
-    -e TUCANO_CONFIG_FILE=/etc/tucano/config.json tucano-test-audit-177:c5e9943 2>&1
+  docker run --rm -v /tmp/audit-177/config-wrong-type.json:/etc/tatu/config.json:ro \
+    -e TATU_CONFIG_FILE=/etc/tatu/config.json tatu-test-audit-177:c5e9943 2>&1
   ```
 
   Controls: the same sentinel as `jwt_secret` (a string in a string field) with the failure provoked
@@ -896,18 +896,18 @@ above stays point-in-time true for revision `c5e9943`.
 
 ### Recorded observations (not findings)
 
-**O-177-1 — A stray `.tucano-<suffix>.tmp` file is inert and unaddressable.** The atomic-write
+**O-177-1 — A stray `.tatu-<suffix>.tmp` file is inert and unaddressable.** The atomic-write
 mechanism leaves a temporary file behind when a write is interrupted before its `rename`. Naming one
 directly is refused rather than served: `POST /projects/Checkout.json/test_cases` with
-`{"testCaseId":".tucano-1700000000000000000.tmp", …}` is **accepted** as an ordinary *case* identifier
+`{"testCaseId":".tatu-1700000000000000000.tmp", …}` is **accepted** as an ordinary *case* identifier
 (HTTP 201 — the string is validated and used as a directory name in that position), and the resulting
 path is a directory the service created, not the atomic-write temporary file, which lives one level
-away as a sibling of the destination document. No route reads a `.tucano-*.tmp` file's contents. Per
+away as a sibling of the destination document. No route reads a `.tatu-*.tmp` file's contents. Per
 the design's pre-commitment (§2.7) this is a pass condition, recorded here because the acceptance of
 the name is a fact a later sub-task (S2-11's overwrite table) will need.
 
 **O-177-2 — The lock file's mode differs between a fresh installation and the operator's existing
-one.** A scratch deployment creates `/data/.tucano.lock` as `-rw-r--r--` (0644); the operator's
+one.** A scratch deployment creates `/data/.tatu.lock` as `-rw-r--r--` (0644); the operator's
 long-lived deployment carries `-rwxrwxrwx` (0777), which is what an earlier revision left behind. The
 lock file holds no data of value, so this is recorded and not scored; it does show that a permission
 change to the lock file would not propagate to an existing volume without a migration.
@@ -972,7 +972,7 @@ inconsistency.
 
 **O-177-10 — Degenerate identifiers are accepted, and the design expected refusal; decided as an
 observation, not a finding.** The design's S2-4 expectation is "Refusal (400 `invalid_…` or 409) for
-**every** degenerate value", and it names `.tucano.lock`, `.tucano-1700000000000000000.tmp`, the
+**every** degenerate value", and it names `.tatu.lock`, `.tatu-1700000000000000000.tmp`, the
 Windows device names, and whitespace-only among the values it expects refused. Measurement (the
 pending-triage table) shows two of those classes **accepted**: a whitespace-only case id → **201**, and
 a dotfile case id → **201**. The control that exists is narrower than the expectation, and the
@@ -989,9 +989,9 @@ measurement does not show, and the second would also overstate exploitability, s
 only be supplied against a project that already exists — one prerequisite step, which is the Moderate
 row rather than the Trivial one, whatever the authentication setting. Two
 consequences are recorded for a reviewer and are **not** scored here. (a) A case directory named
-`.tucano.lock` or `.tucano-<suffix>.tmp` aliases the storage layer's *own* bookkeeping names; for the
+`.tatu.lock` or `.tatu-<suffix>.tmp` aliases the storage layer's *own* bookkeeping names; for the
 lock file the alias is nominal rather than a collision, because `acquire_lock` opens the lock at the
-data root (`src/storage/fs.rs::acquire_lock`, `self.root.join(".tucano.lock")`), one level above any
+data root (`src/storage/fs.rs::acquire_lock`, `self.root.join(".tatu.lock")`), one level above any
 project, and a project child of the same name is a different entry. (b) `unique_suffix()`
 (`src/storage/layout.rs:443`) is `SystemTime::now().as_nanos()` — **pure time, no randomness** — so
 the atomic-temp name built at `src/storage/fs.rs:164` is in principle predictable, and an entry
@@ -1025,7 +1025,7 @@ and the doc-comment in `src/config.rs` — no AEAD type, no key-identifier field
 dependency in the manifest. A secret in the configuration file is in the clear at this revision by
 construction, not by omission of a probe. Second, the *loader* half **is** implemented and reachable,
 which the same revision records: `src/config.rs` reads only the file named by the environment-only
-`TUCANO_CONFIG_FILE`, and its error type "carries none of those by construction, so no `Display` impl
+`TATU_CONFIG_FILE`, and its error type "carries none of those by construction, so no `Display` impl
 can leak them by accident" (`src/config.rs`, module docs). That makes S2-15's **file** half a real,
 executable probe rather than a pending one: what it owes is the container arm the design specifies —
 a read-only mount, a good file, an unknown key, a bad `version`, a malformed document, a missing file,
@@ -1047,11 +1047,11 @@ and the audit's job with respect to it is to record which state applied, which t
 **O-177-12 — A `jwt_secret_file` naming a missing file reports the raw path in the startup text.** The
 same window's container arm produced one result that belongs to the *key* half of the configuration
 boundary rather than to the file half S2-15 is bounded to, so it is recorded here and not scored. With
-`{"version":1,"auth_required":true,"jwt_secret_file":"/etc/tucano/absent-secret"}`, the run exits `1`
+`{"version":1,"auth_required":true,"jwt_secret_file":"/etc/tatu/absent-secret"}`, the run exits `1`
 with
 
 ```text
-Error: SecretFile { path: "/etc/tucano/absent-secret", source: Os { code: 2, kind: NotFound, message: "No such file or directory" } }
+Error: SecretFile { path: "/etc/tatu/absent-secret", source: Os { code: 2, kind: NotFound, message: "No such file or directory" } }
 ```
 
 — a raw absolute path in the console text, which is the rule the ADR's secret-handling section states
@@ -1059,7 +1059,7 @@ and which `auth::ConfigError::SecretFile { path: String, … }` contradicts by c
 variants of that error type carry *values* by construction as well (`InvalidTtl { key, value }`,
 `InvalidBool { value }`), which is the shape F-177-6 measures on the file boundary; a fix to F-177-5's
 rendering would silence the path here without touching those. **Recorded, not scored**, for the reason
-the design gives: S2-15 is bounded to the file named by `TUCANO_CONFIG_FILE`, and the secret-file
+the design gives: S2-15 is bounded to the file named by `TATU_CONFIG_FILE`, and the secret-file
 settings and their error text belong to the Configuration-key boundary's owner (#178) — the same
 boundary split O-177-11 records for the `#189` question. It is kept because this run is the one that
 produced it, and because #178 should test these variants with a sentinel rather than with a path.
@@ -1090,8 +1090,8 @@ identifier probes. They are recorded so the measurement is not lost; every row i
 | Probe | Result |
 | --- | --- |
 | case id `test_runs`, `milestones`, `configurations` (reserved project children), in a freshly created project | **409** `conflict` — refused, and refused in a project whose collection directory does not pre-exist |
-| case id `.tucano.lock` | **201** — accepted as a case directory name; decided below (O-177-10) |
-| case id `.tucano-1700000000000000000.tmp` | **201** — accepted (see O-177-1); decided below (O-177-10) |
+| case id `.tatu.lock` | **201** — accepted as a case directory name; decided below (O-177-10) |
+| case id `.tatu-1700000000000000000.tmp` | **201** — accepted (see O-177-1); decided below (O-177-10) |
 | case id `CON`, `nul`, `aux` (Windows device names) | **201** — accepted; no refusal, so a Windows-hosted volume is the only place the name becomes special |
 | case id `.`, `..`, `a/b`, `a\b` | **400** `invalid_request` — refused |
 | case id `a%2Fb` | **201** — stored literally, no traversal |
@@ -1138,7 +1138,7 @@ corrupted stored document). Every row of that column reports the same value: `0`
 | conflict — two parents | compose a case into a suite that already holds it (pass entry 23, re-read; truncated there in the same way) | **409** | `conflict` | ``This identifier is used by 2 parents (S23 symlink fixture.json, S23 symlink fixture.json/S11s.json); address the intended one through …`` | **partly** — the two containers are named by *identifier*, which is data the caller addressed; no path, no setting | `0` |
 | authorization — no credentials | any protected route, no `Authorization` header | **401** | `missing_token` | `Authentication required` | no | `0` |
 | authorization — unparseable token | `Authorization: Bearer <garbage>` | **401** | `invalid_token` | `Invalid access token` | no | `0` |
-| authorization — expired token | `audit-177-ttl-1` (3324, `TUCANO_ACCESS_TOKEN_TTL=1s`), access token replayed after its TTL | **401** | `token_expired` | `Access token has expired` | no — no setting and no TTL value is named | `0` |
+| authorization — expired token | `audit-177-ttl-1` (3324, `TATU_ACCESS_TOKEN_TTL=1s`), access token replayed after its TTL | **401** | `token_expired` | `Access token has expired` | no — no setting and no TTL value is named | `0` |
 | authorization — credentials | `POST /auth/login`, wrong password and unknown username | **401** | `invalid_credentials` | `Invalid username or password` | no — one body for both, so it is not a username oracle | `0` |
 | authorization — refresh token | `POST /auth/refresh` with a bad token | **401** | `invalid_refresh_token` | `Invalid refresh token` | no | `0` |
 | authorization — role | `POST /projects` with a viewer's token (control: the same request with an administrator's token → **201**) | **403** | `forbidden` | `This account needs the system administrator role` | no — a role name, not a setting or a path | `0` |
@@ -1163,7 +1163,7 @@ only messages that name anything name a role, a field, a byte offset, a content 
 the caller itself supplied.
 
 *The 401 challenge is correct and carries no secret.* Every 401 carries
-`WWW-Authenticate: Bearer realm="Tucano Test API"`, and `error="invalid_token"` is appended for
+`WWW-Authenticate: Bearer realm="TatuTest API"`, and `error="invalid_token"` is appended for
 `invalid_token` and `token_expired` only (`src/api/error.rs:33`), which is exactly what RFC 6750 asks
 for: a request with nothing to authenticate with gets the realm alone, and an expired token — the
 code that tells a client to refresh — is reported as one. That is measured on all five
@@ -1237,7 +1237,7 @@ Controls tested **and not broken** in this checkpoint:
 10. **The document lock is released when the write fails.** With the case folder set to `0555` the
     document write returned **500**; restoring `0755` and re-issuing the same request returned **200**
     `{"message":"Resource updated"}`, i.e. no lock was left held by the failed attempt. No leftover
-    `.tucano-*` entry was found in the tree; the only such name present was the S2-4 fixture
+    `.tatu-*` entry was found in the tree; the only such name present was the S2-4 fixture
     *directory*. (Invariant 9's release half; see O-177-7 for the probe's correction.)
 11. **The attachment lock is released when the write fails.** With the case folder at `0555` the
     attachment POST returned **500**; after restoring `0755` the same POST returned **201** with a
@@ -1258,13 +1258,13 @@ Controls tested **and not broken** in this checkpoint:
     (Invariant 1.)
 13. **Concurrent writers never corrupt the document or leave debris.** After the 32-writer storm of
     `F-177-3` the stored document is complete, parseable JSON served with `200`; the atomic
-    temp-and-rename left **no** `.tucano-*` file anywhere under `/data` (the only such name in the
+    temp-and-rename left **no** `.tatu-*` file anywhere under `/data` (the only such name in the
     tree is the S2-4 fixture *directory*); and a collision is refused rather than merged (`409`).
     What did **not** hold is the durability of every acknowledged write — that is `F-177-3`, and this
     entry is deliberately limited to what passed. (Invariant 2's atomicity half; boundary 4.)
 14. **The identifier charset is deliberately open, and an open name stays inside the actor's own
     project.** The values the design lists as degenerate but the service accepts — a whitespace-only
-    id, the dotfile names `.tucano.lock` and `.tucano-<suffix>.tmp`, the Windows device names, and a
+    id, the dotfile names `.tatu.lock` and `.tatu-<suffix>.tmp`, the Windows device names, and a
     combining-accent value — are stored verbatim as the case directory, are returned by the case
     listing, and remain deletable through the same route that created them; no path leaves
     `Projects/<project>/…`, and no reserved collection is shadowed (the same names *are* refused at
@@ -1272,7 +1272,7 @@ Controls tested **and not broken** in this checkpoint:
     exactly `validate_component`'s refusals, not a charset restriction. Accepted by decision; the
     reading not taken is recorded in O-177-10. (Trust boundary 3.)
 15. **Every bad configuration file stops the service before it serves anything.** With
-    `TUCANO_CONFIG_FILE` naming a scratch file mounted read-only, all four inputs the design names —
+    `TATU_CONFIG_FILE` naming a scratch file mounted read-only, all four inputs the design names —
     an unknown key, a bad `version`, a malformed document, and a missing file — exit **1** with stdout
     empty and no listener bound; nothing under `/data` is created or changed. The refusal half of the
     design's expectation therefore holds (invariant 8). What does **not** hold is the diagnostic half,
@@ -1282,14 +1282,14 @@ Controls tested **and not broken** in this checkpoint:
     valid document starts the service: the container reaches `Up`, `/proc/net/tcp` shows
     `00000000:0BB8 … 0A` (listening on `0.0.0.0:3000` as uid `10001`), and the settings took effect —
     the bootstrap pass created `/data/auth/users.json`, `/data/auth/projects`, `/data/projects` and
-    `/data/.tucano.lock` under the mounted data directory. `docker logs` is **empty**: nothing is
+    `/data/.tatu.lock` under the mounted data directory. `docker logs` is **empty**: nothing is
     logged at startup, a fact S2-12's error-leak table carries in its log column — every row of it
     reads `0` (see entry 26). (Boundaries 6/7.)
-17. **The running service never writes the file named by `TUCANO_CONFIG_FILE`.** Across a full
+17. **The running service never writes the file named by `TATU_CONFIG_FILE`.** Across a full
     start-and-serve run the host file is byte-identical: `sha256`
     `642bab0dd836c259cc4427429e18ff690fcb9d72106103e60705a7e14ba7040d`, mode `664`, and mtime/ctime
     `1789536326` all unchanged before and after. `docker diff` lists the mount as `C /etc`,
-    `A /etc/tucano`, `A /etc/tucano/config.json` — an *addition* relative to the image with **no
+    `A /etc/tatu`, `A /etc/tatu/config.json` — an *addition* relative to the image with **no
     modification** entry — and in-container writes are refused twice over: as the service uid `10001` a
     `touch`/append fails `Permission denied` (rc 1), and isolated with `--user 0:0 --entrypoint sh` the
     same write fails `Read-only file system` (rc 1) with the host hash still unchanged. (Invariant 9;
@@ -1372,7 +1372,7 @@ rest on that name.
     temp file behind.** S2-5's atomicity arm. Ten rounds: a `PUT /test_cases/C1` carrying a 1 MiB
     `description` was fired, and 30 ms later the service was killed with `docker compose -p audit-177
     kill` (`SIGKILL`) and restarted; **every** restart answered `/health` **200**. After the ten
-    rounds: a walk of the whole data directory found **zero** files matching `.tucano-*` or `*.tmp`
+    rounds: a walk of the whole data directory found **zero** files matching `.tatu-*` or `*.tmp`
     — the design's leftover-marker check; all **8** stored `*.json` documents parsed as JSON; and
     `GET /test_cases/C1` returned **200** in **0.003 s** with a complete 1,049,097-byte document. The
     write that won landed whole — `test-case.json` at `version` 4, with `revisions/v4.json` (486
@@ -1453,8 +1453,8 @@ column is exercised by cases this checkpoint created, not by import of a pre-exi
     `{"expectedResult":"e","lastModified":"2026-09-16T10:14:44Z","testCaseId":"C1","title":"A-25","version":28}`,
     and `revisions/` held **27** snapshots (`v1`…`v27`): 50 acknowledged writes, 27 applied versions,
     **23 gone** — in 23 of the 25 rounds; two rounds applied both — and neither replica ever answered
-    `409` or refused anything. A walk of the whole tree found no `.tucano-*` temp file and no `*.tmp`,
-    the only dot-entry in the data root is `data/.tucano.lock`, and all **67** stored `*.json`
+    `409` or refused anything. A walk of the whole tree found no `.tatu-*` temp file and no `*.tmp`,
+    the only dot-entry in the data root is `data/.tatu.lock`, and all **67** stored `*.json`
     documents parse. The loss is silent in every sense: nothing refused, nothing malformed, nothing
     left behind.
     *One replica is enough.* The same storm against a **single** container (case `C2`, 50 requests)
@@ -1487,7 +1487,7 @@ column is exercised by cases this checkpoint created, not by import of a pre-exi
 "writers have stalled" from "the operator polled `/ready`".** `probe_readiness`
 (`src/storage/fs.rs:745–761`) reads `newest_mtime` (`:751`, implemented at `:813` over the data root
 and its immediate entries) *before* `probe_writable` (`:768`) creates and removes its own scratch file
-`root/.tucano-<suffix>.tmp` in that same root. The probe therefore leaves its own file out of the value
+`root/.tatu-<suffix>.tmp` in that same root. The probe therefore leaves its own file out of the value
 it returns — but creating and removing it still bumps the **data root's** mtime, which the *next*
 probe reads as the newest write. Measured on the S2-8 stack: with the data root at
 `2026-09-16 07:17:44.775442391 -0300`, `/diagnostics` reported `lastWriteUnix 1789553864`; one
@@ -1496,7 +1496,7 @@ probe reads as the newest write. Measured on the S2-8 stack: with the data root 
 observation, not a finding: the scratch file is removed, nothing is over-permissive, and the endpoint
 is documented as a readiness report, not as an audit log. What it costs is diagnosability: an operator
 who monitors `/ready` keeps the field moving by monitoring it, and since `write_json` uses the same
-`.tucano-<suffix>.tmp` convention, a fresh `lastWriteUnix` is not evidence that a *client* write
+`.tatu-<suffix>.tmp` convention, a fresh `lastWriteUnix` is not evidence that a *client* write
 landed. (Boundary 4.)
 
 25. **With authentication on, every refusal answers with a stable code, a safe message and a
@@ -1507,7 +1507,7 @@ landed. (Boundary 4.)
     a username oracle), a bad refresh token (`invalid_refresh_token`), and a viewer token on an
     admin-only route (**403** `forbidden`). All of them carry `x-request-id` on the response and the
     same value as `error.requestId` in the envelope, and every 401 carries
-    `WWW-Authenticate: Bearer realm="Tucano Test API"` with `error="invalid_token"` appended only for
+    `WWW-Authenticate: Bearer realm="TatuTest API"` with `error="invalid_token"` appended only for
     the two token-shaped failures (`src/api/error.rs:33`). The administrator control passed: the same
     request that drew the 403 answered **201** with an administrator's token. (Invariant 3; invariant
     6; boundary 6.)
@@ -1560,7 +1560,7 @@ and this note does not claim to. (Invariants 3 and 6; the S2-12 table in §4.)
     store's own filenames under the traversal path (`/auth/users.json`,
     `/auth/projects/audit177proj.json`) and the same paths with a viewer's token. `PUT`, `POST` and
     `DELETE` on `/projects/../auth/users.json` answer 404 as well, and leave
-    `TUCANO_DATA_DIR/auth/users.json` byte-identical (sha256 `b373b83d…55e9e4` before and after). The
+    `TATU_DATA_DIR/auth/users.json` byte-identical (sha256 `b373b83d…55e9e4` before and after). The
     one route in the `/auth` namespace that answers is `/auth/me` — **200** for an administrator and
     **200** for the viewer — and what it returns is the *caller's own* record,
     `{"id":…,"username":…,"systemAdmin":…,"roles":{…}}`, with no password hash and nothing about
@@ -1660,7 +1660,7 @@ re-confirmed.
 - **The Info worked example** ([audit-scope.md](audit-scope.md) § 5, left by it to "**#179** or #178 to
   confirm against the code"): `scripts/clear-data.mjs`. S4 confirmed it against the code and S3
   re-checked it at its own revision; re-read here, the facts are unchanged —
-  `scripts/clear-data.mjs:25-32` is the fixed candidate list (`argv[2]`, `API_URL`, `TUCANO_API_URL`
+  `scripts/clear-data.mjs:25-32` is the fixed candidate list (`argv[2]`, `API_URL`, `TATU_API_URL`
   and the three localhost URLs, filtered) and `:46` falls back to the first candidate when none answers
   `/health`, and `Authorization` does not appear in the file at all. The calibration holds, nothing in
   S2 changes it, and it is **not** raised as a finding.
@@ -1707,11 +1707,11 @@ Recorded 2026-09-16, at the end of the window that produced this checkpoint.
 | Step | Command | Result |
 | --- | --- | --- |
 | Stop and remove the stack and its volume | `docker compose -p audit-177 down -v` | Container `audit-177-api-1` stopped and removed; network `audit-177_default` removed |
-| Remove container-written files | `docker run --rm --entrypoint /bin/bash -v /tmp/audit-177/data:/w tucano-test-audit-177:c5e9943 -c 'cd /w && find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +'` | Ran as `uid=10001(tucano)` — **the ownership workaround was needed**, exactly as for S3: the 142 entries the service wrote are owned on the host by `110000:100998` with `0755` directories, which the operator's own uid cannot unlink. The helper ran **before** the image was removed, so it could borrow the image's uid mapping |
+| Remove container-written files | `docker run --rm --entrypoint /bin/bash -v /tmp/audit-177/data:/w tatu-test-audit-177:c5e9943 -c 'cd /w && find . -mindepth 1 -maxdepth 1 -exec rm -rf {} +'` | Ran as `uid=10001(tatu)` — **the ownership workaround was needed**, exactly as for S3: the 142 entries the service wrote are owned on the host by `110000:100998` with `0755` directories, which the operator's own uid cannot unlink. The helper ran **before** the image was removed, so it could borrow the image's uid mapping |
 | Remove the scratch directory | `rm -rf /tmp/audit-177` | Gone, including the `outside-canary.json` planted outside the tree's document area and every captured output |
-| Remove the audit image | `docker rmi tucano-test-audit-177:c5e9943` | Untagged; `8db4b338b31c36d55fa168962c5d9522466a959c5bb86512652636c44e41a173` deleted |
+| Remove the audit image | `docker rmi tatu-test-audit-177:c5e9943` | Untagged; `8db4b338b31c36d55fa168962c5d9522466a959c5bb86512652636c44e41a173` deleted |
 | Confirm nothing is left | `docker ps -a --filter name=audit-177`; `docker images \| grep audit-177` | No container, no image |
-| Confirm the operator's instance is untouched | `docker ps` | `tucano-test-api-1` still `Up 34 hours`, `tucano-test-gui-1` still `Up 34 hours`. **Note for the next reader:** `docker inspect` reports that container's `Config.Image` as `tucano-test-api:local` but its image id as `13f10c0e9208` (built 2026-09-09), while the tag `tucano-test-api:local` now resolves to `8f075af3c2e7` (built 2026-09-15) — the tag was rebuilt at some point without the running container being recreated. This audit did not build or re-tag that image and did not touch that container; the observation is recorded only so a later checkpoint does not read the mismatch as evidence of this window's work |
+| Confirm the operator's instance is untouched | `docker ps` | `tatu-test-api-1` still `Up 34 hours`, `tatu-test-gui-1` still `Up 34 hours`. **Note for the next reader:** `docker inspect` reports that container's `Config.Image` as `tatu-test-api:local` but its image id as `13f10c0e9208` (built 2026-09-09), while the tag `tatu-test-api:local` now resolves to `8f075af3c2e7` (built 2026-09-15) — the tag was rebuilt at some point without the running container being recreated. This audit did not build or re-tag that image and did not touch that container; the observation is recorded only so a later checkpoint does not read the mismatch as evidence of this window's work |
 
 The throwaway volume of the first stack was `tmpfs` on the host's `/tmp`, which is why S2-8's result
 could not be taken from it: the sub-task was re-provisioned on a disk-backed directory, and that is
@@ -1725,7 +1725,7 @@ recorded in §1's *Note on the image id* — and `/tmp/audit-177/` was recreated
 six configuration fixtures, the captured `out-*.txt` files and the split stdout/stderr pair. The image
 was **deliberately retained**, and only the one named probe container (`audit-s2-15-good`) was removed,
 so the remaining sub-tasks start with `docker compose -p audit-177 up -d` instead of a rebuild. Nothing
-else was left running: `docker ps` reports only the operator's `tucano-test-api-1`, `tucano-test-gui-1`
+else was left running: `docker ps` reports only the operator's `tatu-test-api-1`, `tatu-test-gui-1`
 and `open-webui`. This is a change of state from the tear-down table above and is recorded here rather
 than by editing that table, which keeps the record of what the tear-down did.
 
@@ -1733,16 +1733,16 @@ than by editing that table, which keeps the record of what the tear-down did.
 image: the S2-8 pair `audit-177-disk-a-1` (127.0.0.1:3321) and `audit-177-disk-c-1` (127.0.0.1:3322),
 each bind-mounting `/var/tmp/audit-177-disk/data`; the earlier `audit-177-api-1` (3320) on the
 `tmpfs` fixture at `/tmp/audit-177/data`; and the two S2-12 stacks — `audit-177-auth-1` (127.0.0.1:3323),
-the configuration with authentication **on** (`TUCANO_AUTH_REQUIRED=true` and a 32-byte
-`TUCANO_JWT_SECRET`) over `/var/tmp/audit-177-auth/data`, and `audit-177-ttl-1` (127.0.0.1:3324), the
-same stack with `TUCANO_ACCESS_TOKEN_TTL=1s` and `TUCANO_REFRESH_TOKEN_TTL=60s` over
+the configuration with authentication **on** (`TATU_AUTH_REQUIRED=true` and a 32-byte
+`TATU_JWT_SECRET`) over `/var/tmp/audit-177-auth/data`, and `audit-177-ttl-1` (127.0.0.1:3324), the
+same stack with `TATU_ACCESS_TOKEN_TTL=1s` and `TATU_REFRESH_TOKEN_TTL=60s` over
 `/var/tmp/audit-177-ttl/data` — the latter added so `token_expired` could be measured inside one
 checkpoint rather than a day later. Both new data directories were created on the host and needed
 `chmod 777` before the container could write into them at all: the service runs as `uid=10001` and
 does not create a missing bind-mount source, so without the mode change the stack failed at startup
 with `PermissionDenied` (the same ownership shape §7's tear-down table records for the `tmpfs`
 stack). The S2-8 fixtures sit on `/var/tmp`, which is `ext4` on this
-host and survives a reboot, so the pair's state — `data/.tucano.lock`, `projects/S28/` with `C1` (27
+host and survives a reboot, so the pair's state — `data/.tatu.lock`, `projects/S28/` with `C1` (27
 revisions, `version` 28), `C2` (25, 26) and `C3` (11, 12), and the `s28-storm.log`, `s28-single.log`,
 `s28-stale.log` and `c3-slow-*.{json,code}` transcripts — is the evidence pass entry 24 is written
 from and can be re-read by a later checkpoint. The two S2-12 stacks are durable in the same way —

@@ -2,13 +2,13 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-14
-- **Issue:** [#181](https://github.com/TucanoTechnology/TucanoTestAPI/issues/181) (child of epic [#167](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167))
+- **Issue:** [#181](https://github.com/TatuHQ/TatuTestAPI/issues/181) (child of epic [#167](https://github.com/TatuHQ/TatuTestAPI/issues/167))
 - **Deciders:** repository owner (ECiurleo)
 - **Supersedes:** nothing
 
 ## Context
 
-Epic [#167](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167) proposes that a deployment be
+Epic [#167](https://github.com/TatuHQ/TatuTestAPI/issues/167) proposes that a deployment be
 able to keep its data in an S3-compatible object store instead of a shared POSIX volume. That is a direct
 challenge to an invariant this repository states in several places, so the epic is blocked on a decision that
 must be recorded before any code is written. This document is that decision.
@@ -23,7 +23,7 @@ Three documents carry the same rule, and they agree:
   data volumes."
 - **`AGENTS.md` — Docker & Deployment.** "Scale only with a shared persistent POSIX volume and
   advisory-lock support." "Storage mirrors the conceptual organisation."
-- **`README.md` — Storage concept / Scaling.** "Tucano Test is a **file-based test case management system**:
+- **`README.md` — Storage concept / Scaling.** "TatuTest is a **file-based test case management system**:
   there is no database. All state is kept as folders and JSON files on the filesystem". "Repository mutations
   use an advisory lock file and atomic same-directory renames."
 - **`docs/deployment/deployment-guide.md` — Scaling.** Multi-node deployments "must provide shared storage
@@ -38,7 +38,7 @@ store does not offer. `src/storage/fs.rs` implements exactly two durability mech
    destination, writes the document, calls `sync_all`, then `fs::rename`s it over the target. A reader
    therefore observes either the old document or the new one, never a partial write. Rename-over-existing
    is atomic only on a filesystem that guarantees it.
-2. **A single process-exclusive advisory lock.** `acquire_lock` opens `<data>/.tucano.lock` and takes
+2. **A single process-exclusive advisory lock.** `acquire_lock` opens `<data>/.tatu.lock` and takes
    `lock_exclusive()` (via `fs2`, i.e. `flock`). Every mutating path — write, delete, place, attachment
    save/delete, revision snapshot — is wrapped in it, so the read-modify-write sequences (for example,
    appending to a case's `attachments` array under the same lock as the file write) are serialised across
@@ -50,7 +50,7 @@ On top of those two primitives the storage layer assumes, without ever stating i
   the folders inside it, a suite's cases likewise. Listing is `read_dir`. `place` with `copy` is a recursive
   directory copy; `move` is a rename, falling back to copy-then-delete.
 - **Path confinement via the real filesystem.** `ensure_within` resolves and compares canonical paths so a
-  symlink or `..` cannot escape `TUCANO_DATA_DIR`.
+  symlink or `..` cannot escape `TATU_DATA_DIR`.
 - **Rename and unlink semantics for identity.** Creating a second child with an existing name is a `409`
   because the folder already exists; deleting a project removes its whole subtree with `remove_dir_all`.
 - **POSIX permission control.** `set_private_permissions` sets `0o666` on written documents; a test asserts
@@ -93,7 +93,7 @@ a POSIX filesystem with working advisory locks and atomic rename.
 | Property | What it means here | Today (filesystem) |
 | --- | --- | --- |
 | **Atomic writes** | A reader sees the old or the new document, never a mix | Same-directory temp + `sync_all` + rename |
-| **Advisory locking** | Cross-process mutual exclusion for the whole mutation | `.tucano.lock` via `flock`, one lock for every write |
+| **Advisory locking** | Cross-process mutual exclusion for the whole mutation | `.tatu.lock` via `flock`, one lock for every write |
 | **Multi-replica correctness** | N replicas on shared storage serve one consistent view | Guaranteed by the two mechanisms above |
 | **Backup / restore** | A copy of the volume is a complete, restorable backup | `cp`/`tar`/snapshot of a directory; the volume *is* the state |
 | **GUI contract** | GUI uses only the HTTP API and never touches storage | Unaffected by where storage lives |
@@ -102,8 +102,8 @@ a POSIX filesystem with working advisory locks and atomic rename.
 
 Keep the invariant exactly as written; do not admit object storage. Record that the file-based deployment on
 a shared POSIX volume is the single supported persistence model, and close epic
-[#167](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167) and its children
-([#181](https://github.com/TucanoTechnology/TucanoTestAPI/issues/181)…[#186](https://github.com/TucanoTechnology/TucanoTestAPI/issues/186)).
+[#167](https://github.com/TatuHQ/TatuTestAPI/issues/167) and its children
+([#181](https://github.com/TatuHQ/TatuTestAPI/issues/181)…[#186](https://github.com/TatuHQ/TatuTestAPI/issues/186)).
 
 - **Atomic writes:** unchanged — full guarantee.
 - **Advisory locking:** unchanged — full guarantee.
@@ -111,7 +111,7 @@ a shared POSIX volume is the single supported persistence model, and close epic
 - **Backup / restore:** unchanged — the volume is the backup; restore is a mount.
 - **GUI contract:** unchanged — no API surface changes.
 - **Cost:** a deployment that for organisational reasons cannot mount a shared POSIX volume (for example, a
-  platform that only offers object storage) cannot run a multi-replica Tucano Test. That is a real
+  platform that only offers object storage) cannot run a multi-replica TatuTest. That is a real
   limitation, but it is a *deployment constraint*, and the guide already tells such operators to use a
   single node with one shared volume.
 - **Integrity:** keeps every promised guarantee with no new code, no new dependency, and no new failure
@@ -168,7 +168,7 @@ under one lock), `read_revision`, and so on. Making it backend-agnostic is not a
   partition, credential expiry, throttling, partial multi-object failure) that the current error envelope
   does not describe.
 - **Integrity risk:** the highest. It is the option most likely to produce a system that *looks* like
-  Tucano Test (files, JSON, no database) while having quietly lost the atomicity, locking, and multi-replica
+  TatuTest (files, JSON, no database) while having quietly lost the atomicity, locking, and multi-replica
   properties the repository says it has. If it is ever taken, those losses must be stated in the same
   breath as the feature.
 
@@ -198,7 +198,7 @@ external, out-of-process backup/mirror that the API never reads from or writes t
 Concretely:
 
 1. **The file-based invariant stands.** The server keeps exactly one persistence model: folders and JSON
-   under `TUCANO_DATA_DIR`, atomic same-directory rename, and a process-exclusive advisory lock file. This
+   under `TATU_DATA_DIR`, atomic same-directory rename, and a process-exclusive advisory lock file. This
    ADR does **not** relax `AGENTS.md` or `README.md`; no wording in either is changed by this decision.
 
 2. **No `Repository` backend abstraction is added for the sake of a second backend.** `Repository` remains
@@ -209,13 +209,13 @@ Concretely:
    the API. The service never talks to it, so no application guarantee changes. Such a mirror is out of
    scope for this repository's code and, when documented, must state its consistency caveats (see Option B).
 
-4. **Epic [#167](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167) and its coding children are
+4. **Epic [#167](https://github.com/TatuHQ/TatuTestAPI/issues/167) and its coding children are
    cancelled** to match this decision, and the epic is closed as *declined by decision, not delivered*. The
-   child tasks [#182](https://github.com/TucanoTechnology/TucanoTestAPI/issues/182),
-   [#183](https://github.com/TucanoTechnology/TucanoTestAPI/issues/183),
-   [#184](https://github.com/TucanoTechnology/TucanoTestAPI/issues/184),
-   [#185](https://github.com/TucanoTechnology/TucanoTestAPI/issues/185) and
-   [#186](https://github.com/TucanoTechnology/TucanoTestAPI/issues/186) are re-scoped as described in
+   child tasks [#182](https://github.com/TatuHQ/TatuTestAPI/issues/182),
+   [#183](https://github.com/TatuHQ/TatuTestAPI/issues/183),
+   [#184](https://github.com/TatuHQ/TatuTestAPI/issues/184),
+   [#185](https://github.com/TatuHQ/TatuTestAPI/issues/185) and
+   [#186](https://github.com/TatuHQ/TatuTestAPI/issues/186) are re-scoped as described in
    *Downstream tasks*.
 
 ### Rationale
@@ -275,13 +275,13 @@ change rather than an exploratory rewrite.
 
 | Task | Original intent | Disposition under this decision |
 | --- | --- | --- |
-| [#181](https://github.com/TucanoTechnology/TucanoTestAPI/issues/181) | This ADR | **Delivered** by this document |
-| [#182](https://github.com/TucanoTechnology/TucanoTestAPI/issues/182) | Extract a backend-agnostic `Repository` boundary | **Cancelled** — not needed; `Repository` is already an internal seam and stays internal |
-| [#183](https://github.com/TucanoTechnology/TucanoTestAPI/issues/183) | Implement the S3-backed `Repository` | **Cancelled** — declined by this decision |
-| [#184](https://github.com/TucanoTechnology/TucanoTestAPI/issues/184) | S3 configuration and credential wiring | **Cancelled** — no S3 backend exists to configure |
-| [#185](https://github.com/TucanoTechnology/TucanoTestAPI/issues/185) | Conformance tests for the storage backends | **Cancelled** — no second backend |
-| [#186](https://github.com/TucanoTechnology/TucanoTestAPI/issues/186) | Document the storage backends | **Re-scoped** — becomes, if pursued, documentation of the *mirror* option (Option B): what a mirror may be, how to produce one consistently, and how to restore from it. Optional and out of scope here. |
-| Epic [#167](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167) | Add an object-storage backend | **Closed as declined by decision** |
+| [#181](https://github.com/TatuHQ/TatuTestAPI/issues/181) | This ADR | **Delivered** by this document |
+| [#182](https://github.com/TatuHQ/TatuTestAPI/issues/182) | Extract a backend-agnostic `Repository` boundary | **Cancelled** — not needed; `Repository` is already an internal seam and stays internal |
+| [#183](https://github.com/TatuHQ/TatuTestAPI/issues/183) | Implement the S3-backed `Repository` | **Cancelled** — declined by this decision |
+| [#184](https://github.com/TatuHQ/TatuTestAPI/issues/184) | S3 configuration and credential wiring | **Cancelled** — no S3 backend exists to configure |
+| [#185](https://github.com/TatuHQ/TatuTestAPI/issues/185) | Conformance tests for the storage backends | **Cancelled** — no second backend |
+| [#186](https://github.com/TatuHQ/TatuTestAPI/issues/186) | Document the storage backends | **Re-scoped** — becomes, if pursued, documentation of the *mirror* option (Option B): what a mirror may be, how to produce one consistently, and how to restore from it. Optional and out of scope here. |
+| Epic [#167](https://github.com/TatuHQ/TatuTestAPI/issues/167) | Add an object-storage backend | **Closed as declined by decision** |
 
 ### Positive
 
@@ -292,7 +292,7 @@ change rather than an exploratory rewrite.
 
 ### Negative / accepted risks
 
-- A deployment that cannot provide a shared POSIX volume cannot run a multi-replica Tucano Test. Accepted:
+- A deployment that cannot provide a shared POSIX volume cannot run a multi-replica TatuTest. Accepted:
   such a deployment must run a single replica with one shared volume, as the deployment guide already
   requires.
 - There is no built-in object-store backup. Accepted: off-box copies are produced by external tooling, and
@@ -307,8 +307,8 @@ backup/restore runbook before any code lands.
 
 ## References
 
-- [Epic #167 — Add an object-storage (S3) backend for the data volume](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167)
-- [Issue #181 — this ADR](https://github.com/TucanoTechnology/TucanoTestAPI/issues/181)
+- [Epic #167 — Add an object-storage (S3) backend for the data volume](https://github.com/TatuHQ/TatuTestAPI/issues/167)
+- [Issue #181 — this ADR](https://github.com/TatuHQ/TatuTestAPI/issues/181)
 - [`AGENTS.md`](../../AGENTS.md) — Core Project Philosophy, Docker & Deployment, Storage Security
 - [`README.md`](../../README.md) — Storage concept, Scaling
 - [`docs/deployment/deployment-guide.md`](../deployment/deployment-guide.md) — scaling and rollback

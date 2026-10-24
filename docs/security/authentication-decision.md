@@ -1,21 +1,21 @@
 # Authentication Decision (Issue #107)
 
-Issue: [#107](https://github.com/TucanoTechnology/TucanoTestAPI/issues/107) — make and document the
-authentication decision. Split from [#14](https://github.com/TucanoTechnology/TucanoTestAPI/issues/14)
+Issue: [#107](https://github.com/TatuHQ/TatuTestAPI/issues/107) — make and document the
+authentication decision. Split from [#14](https://github.com/TatuHQ/TatuTestAPI/issues/14)
 (operational hardening). This document is the decision of record; implementation is tracked separately.
 
 ## Decision
 
 **The approach is fixed, and it is now implemented.** This issue (#107) chose the approach and wrote no
-code; the implementation landed separately under [#130](https://github.com/TucanoTechnology/TucanoTestAPI/issues/130),
+code; the implementation landed separately under [#130](https://github.com/TatuHQ/TatuTestAPI/issues/130),
 following the decisions below.
 
 | Aspect | Decision |
 | --- | --- |
-| Timing | **Implemented** in [#130](https://github.com/TucanoTechnology/TucanoTestAPI/issues/130), gated by `TUCANO_AUTH_REQUIRED` (default `false`, so an existing deployment is unchanged until it opts in). |
+| Timing | **Implemented** in [#130](https://github.com/TatuHQ/TatuTestAPI/issues/130), gated by `TATU_AUTH_REQUIRED` (default `false`, so an existing deployment is unchanged until it opts in). |
 | Authorization model | **Project-scoped RBAC.** Permissions and access are granted **per project by role** (`viewer` < `editor` < `owner`), with a `systemAdmin` global bypass. The project is the authorization boundary; a role is scoped to a project, not global. |
 | Authentication mechanism | **Short-lived JWT access token plus a refresh token.** Stateless and database-free. |
-| Persistence | **No database.** Principals and their per-project grants live under `TUCANO_DATA_DIR/auth/` as JSON; the file-based deployment and its persistent volume remain the only state. |
+| Persistence | **No database.** Principals and their per-project grants live under `TATU_DATA_DIR/auth/` as JSON; the file-based deployment and its persistent volume remain the only state. |
 | Authentication middleware | **Decided: no middleware.** Enforcement is a `Principal` request extractor plus per-handler guards, so an unauthenticated request is refused before the body is read and the route table stays the single place a caller's reach is decided. |
 
 The intended balance is: no database, no per-request file I/O for the common case, and revocation risk bounded
@@ -56,12 +56,12 @@ by the access-token expiry window, with refresh handling carrying the revocation
    publishes `bearerAuth` as a global requirement, with the five caller-free operations marked `security: []`.
 4. The "Unauthorized access" abuse case in the [threat model](threat-model.md) must gain its auth-matrix tests.
 5. The API must **not** be exposed beyond a trusted network until this is implemented. Enforcement is now in
-   place; exposure still requires `TUCANO_AUTH_REQUIRED=true` plus a `TUCANO_JWT_SECRET` of at least 32 bytes,
+   place; exposure still requires `TATU_AUTH_REQUIRED=true` plus a `TATU_JWT_SECRET` of at least 32 bytes,
    and `docs/security/threat-model.md` should be re-read before any deployment that faces untrusted networks.
 
 ## Tracking
 
-Implementation is tracked in **[#130 — Auth: implement authentication](https://github.com/TucanoTechnology/TucanoTestAPI/issues/130)**,
+Implementation is tracked in **[#130 — Auth: implement authentication](https://github.com/TatuHQ/TatuTestAPI/issues/130)**,
 which carries this approach as its description, alongside the parent hardening ticket #14.
 
 Implementation landed on `feat/p2-130-auth`. What it publishes:
@@ -70,8 +70,8 @@ Implementation landed on `feat/p2-130-auth`. What it publishes:
   `bearerFormat` — as a global `security` requirement, and marks the operations that need no caller with
   `security: []`: `GET /health`, `GET /openapi.json`, `GET /api-docs`, `POST /auth/login` and
   `POST /auth/refresh` as published here, with `GET /ready` and `GET /diagnostics` added later by
-  [#104](https://github.com/TucanoTechnology/TucanoTestAPI/issues/104) and `GET /metrics` added later by
-  [#102](https://github.com/TucanoTechnology/TucanoTestAPI/issues/102).
+  [#104](https://github.com/TatuHQ/TatuTestAPI/issues/104) and `GET /metrics` added later by
+  [#102](https://github.com/TatuHQ/TatuTestAPI/issues/102).
 - Four session endpoints exist: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, and
   `GET /auth/me`. Success answers `SessionResponse` (access token, refresh token, token type, and the access
   token's lifetime in seconds) or `MeResponse` (the caller's identity plus its per-project roles). Failure
@@ -83,10 +83,10 @@ Implementation landed on `feat/p2-130-auth`. What it publishes:
   creating or duplicating a project requires `systemAdmin`; a milestone must name a project-bearing reference.
   The surface is pinned by the authorization matrix in `tests/auth.rs` and the security-posture check in
   `tests/service.rs`.
-- The configuration is inert until opted into: `TUCANO_AUTH_REQUIRED` defaults to `false`, so an existing
-  deployment behaves exactly as before. Turning it on also requires `TUCANO_JWT_SECRET`
-  (or `TUCANO_JWT_SECRET_FILE`) of at least 32 bytes, and optional `TUCANO_ACCESS_TOKEN_TTL` /
-  `TUCANO_REFRESH_TOKEN_TTL` / `TUCANO_BOOTSTRAP_USERNAME` / `TUCANO_BOOTSTRAP_PASSWORD`.
+- The configuration is inert until opted into: `TATU_AUTH_REQUIRED` defaults to `false`, so an existing
+  deployment behaves exactly as before. Turning it on also requires `TATU_JWT_SECRET`
+  (or `TATU_JWT_SECRET_FILE`) of at least 32 bytes, and optional `TATU_ACCESS_TOKEN_TTL` /
+  `TATU_REFRESH_TOKEN_TTL` / `TATU_BOOTSTRAP_USERNAME` / `TATU_BOOTSTRAP_PASSWORD`.
 
 Known gaps are recorded in the [threat model](threat-model.md) under "Known limitations": there is no
 grant-administration endpoint yet, so accounts and grants are provisioned out of band.
@@ -96,5 +96,5 @@ grant-administration endpoint yet, so accounts and grants are provisioned out of
 This decision's settings arrive as environment variables. Where those settings *come from* — and how a
 secret is stored at rest once a unified configuration file exists — is decided separately in
 [configuration-decision.md](configuration-decision.md) (#187). Nothing here changes: environment
-variables stay authoritative, and `TUCANO_JWT_SECRET` / `TUCANO_JWT_SECRET_FILE` remain first-class
+variables stay authoritative, and `TATU_JWT_SECRET` / `TATU_JWT_SECRET_FILE` remain first-class
 sources under the precedence that document defines.

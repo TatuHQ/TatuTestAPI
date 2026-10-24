@@ -72,7 +72,7 @@ impl FileRepository {
             .truncate(false)
             .read(true)
             .write(true)
-            .open(self.root.join(".tucano.lock"))?;
+            .open(self.root.join(".tatu.lock"))?;
         let deadline = Instant::now() + self.lock_timeout;
         loop {
             match lock.try_lock_exclusive() {
@@ -233,7 +233,7 @@ impl FileRepository {
             io::Error::new(io::ErrorKind::InvalidInput, "destination has no parent")
         })?;
         create_private_dir_all(directory)?;
-        let temporary = directory.join(format!(".tucano-{}.tmp", unique_suffix()));
+        let temporary = directory.join(format!(".tatu-{}.tmp", unique_suffix()));
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -610,7 +610,7 @@ impl Repository for FileRepository {
 /// The scratch file follows the atomic-write temporary convention, so a probe
 /// interrupted part-way can never be mistaken for a stored document.
 fn probe_writable(root: &Path) -> bool {
-    let scratch = root.join(format!(".tucano-{}.tmp", unique_suffix()));
+    let scratch = root.join(format!(".tatu-{}.tmp", unique_suffix()));
     match OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -638,7 +638,7 @@ fn probe_lock(root: &Path) -> (bool, bool) {
         .truncate(false)
         .read(true)
         .write(true)
-        .open(root.join(".tucano.lock"))
+        .open(root.join(".tatu.lock"))
     else {
         return (false, false);
     };
@@ -780,7 +780,7 @@ fn revision_number(name: &str) -> Option<u64> {
 /// The check is read-only: it counts the `*.json` documents directly inside
 /// each former root collection and reports the ones that hold any. A name
 /// beginning with `.` is skipped, which is the atomic-write temporary pattern
-/// `write_json` uses (`.tucano-<suffix>.tmp`); a subdirectory, a symlink and
+/// `write_json` uses (`.tatu-<suffix>.tmp`); a subdirectory, a symlink and
 /// any other file are not documents and are left alone. An absent directory is
 /// a fresh volume and an empty one is every volume that predates the change,
 /// so neither is an error.

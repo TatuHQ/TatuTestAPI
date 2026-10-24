@@ -1,9 +1,9 @@
 # File-Format Versioning Plan (Issue #98)
 
-Issue: [#98](https://github.com/TucanoTechnology/TucanoTestAPI/issues/98) — the durability step split from
-[#16](https://github.com/TucanoTechnology/TucanoTestAPI/issues/16). It is the storage-format analogue of the
-test-case versioning plan ([#89](https://github.com/TucanoTechnology/TucanoTestAPI/issues/89) /
-[#90](https://github.com/TucanoTechnology/TucanoTestAPI/issues/90)): where that plan versions an individual
+Issue: [#98](https://github.com/TatuHQ/TatuTestAPI/issues/98) — the durability step split from
+[#16](https://github.com/TatuHQ/TatuTestAPI/issues/16). It is the storage-format analogue of the
+test-case versioning plan ([#89](https://github.com/TatuHQ/TatuTestAPI/issues/89) /
+[#90](https://github.com/TatuHQ/TatuTestAPI/issues/90)): where that plan versions an individual
 case's content, this one versions the **on-disk shape of a stored document**.
 
 **The marker described here is not implemented.** No document on disk carries a `formatVersion` today, no
@@ -13,12 +13,12 @@ no stored document changes with it.
 `docs/contracts/api-compatibility.md` remains the compatibility authority, and the *File-format versioning*
 section the ticket asks for belongs inside it. That file is protected on the API (code) track, so that
 section and its pointer back to this file are deferred to that track; the deferral is recorded on
-[#98](https://github.com/TucanoTechnology/TucanoTestAPI/issues/98). Until that section lands, **this file is
+[#98](https://github.com/TatuHQ/TatuTestAPI/issues/98). Until that section lands, **this file is
 the recorded plan**.
 
 ## Why a marker at all
 
-A document's storage format is implicit today. Nothing written to `TUCANO_DATA_DIR` records which schema the
+A document's storage format is implicit today. Nothing written to `TATU_DATA_DIR` records which schema the
 writer had in mind, so a reader can only tell two states apart by failing: it either deserialises a document
 or it does not. That conflates two different situations:
 
@@ -67,7 +67,7 @@ and the reader's supported value is a named constant, `SUPPORTED_FORMAT_VERSION:
 | `Milestone` | `projects/<project>/milestones/<id>.json` |
 | `TestConfiguration` | `projects/<project>/configurations/<id>.json` |
 
-The last three rows are storage **layout v3** ([#215](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215),
+The last three rows are storage **layout v3** ([#215](https://github.com/TatuHQ/TatuTestAPI/issues/215),
 [`docs/architecture/adr-storage-layout-v3.md`](../architecture/adr-storage-layout-v3.md)): runs, milestones and
 configurations moved from root-level collections into the project folder that owns them. **That move is not a
 format change and needs no `formatVersion` bump.** The marker describes the shape and meaning of a document, and
@@ -103,7 +103,7 @@ Two rules, both of which exist to keep rollback possible:
    older build's `deny_unknown_fields` rejects, turning a routine upgrade into a one-way door and breaking
    the very rollback the marker is meant to protect.
 2. **The API owns the value.** A create or update body that supplies `formatVersion` has no effect: the field
-   is dropped on write, the same way [`#90`](https://github.com/TucanoTechnology/TucanoTestAPI/issues/90)
+   is dropped on write, the same way [`#90`](https://github.com/TatuHQ/TatuTestAPI/issues/90)
    treats the `version` / `lastModified` pair the API manages. Storing a client-supplied value would let a
    caller hand the service a document the service cannot read back, which is a denial of service on its own
    data. Note that the payload validator cannot make this call on its own: `check_against_model` only proves
@@ -160,7 +160,7 @@ section of the promotion runbook), and this plan does not change it.
 
 ## Rollback drill matrix
 
-This is the matrix [#101](https://github.com/TucanoTechnology/TucanoTestAPI/issues/101) asserts; it is
+This is the matrix [#101](https://github.com/TatuHQ/TatuTestAPI/issues/101) asserts; it is
 recorded here so the tests cite one specification rather than re-deriving it. It states what a build does
 when it opens a document whose `formatVersion` it does not support.
 
@@ -232,7 +232,7 @@ Two rollback outcomes follow, and only the first is safe without a migration ste
 | A test that a future `formatVersion` is refused cleanly | `tests/` | **deferred** to the API (code) track |
 
 The four deferred items are all in files this backlog's ownership boundary protects, so they are recorded on
-[#98](https://github.com/TucanoTechnology/TucanoTestAPI/issues/98) rather than opened as a branch that cannot
+[#98](https://github.com/TatuHQ/TatuTestAPI/issues/98) rather than opened as a branch that cannot
 satisfy the Definition of Done.
 
 ## Files

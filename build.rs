@@ -9,12 +9,12 @@ fn main() {
     println!("cargo:rerun-if-env-changed=BUILD_NUMBER");
     println!("cargo:rerun-if-changed=build.rs");
     let build = std::env::var("BUILD_NUMBER").unwrap_or_else(|_| "local".to_owned());
-    println!("cargo:rustc-env=TUCANO_BUILD={build}");
+    println!("cargo:rustc-env=TATU_BUILD={build}");
     let rustc =
         std::process::Command::new(std::env::var_os("RUSTC").unwrap_or_else(|| "rustc".into()))
             .arg("--version")
             .output()
             .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned())
             .unwrap_or_else(|_| "unknown".to_owned());
-    println!("cargo:rustc-env=TUCANO_TOOLCHAIN={rustc}");
+    println!("cargo:rustc-env=TATU_TOOLCHAIN={rustc}");
 }

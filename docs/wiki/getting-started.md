@@ -4,7 +4,7 @@ This page takes you from a clean checkout to a running instance with a project, 
 in it. Every command below is copy-pasteable, and the expected output is stated so you can tell
 whether you are on track.
 
-Tucano Test is a **file-based** service: everything it stores lives as folders and JSON documents
+TatuTest is a **file-based** service: everything it stores lives as folders and JSON documents
 under one data directory. There is no database to install, and nothing below that directory is
 edited by hand — the API is the only writer. See the [repository README](../../README.md) for the
 full storage concept.
@@ -16,7 +16,7 @@ The Compose file defines two containers:
 | Service | Host port | Container port | Built from |
 | --- | --- | --- | --- |
 | `api` | `3100` | `3000` | this repository's `Dockerfile` |
-| `gui` | `8080` | `8080` | a sibling `../TucanoTestGUI` checkout |
+| `gui` | `8080` | `8080` | a sibling `../TatuTestGUI` checkout |
 
 > **The port and the container port are different numbers, and that is expected.** Inside the
 > container the API listens on `3000` (the `PORT` environment variable); Compose publishes it on
@@ -29,7 +29,7 @@ The Compose file defines two containers:
 - **Docker Engine 24 or newer** and the **Docker Compose v2** plugin (`docker compose`, not the
   legacy `docker-compose`).
 - A checkout of this repository.
-- For the `gui` service only: a sibling checkout of TucanoTestGUI at `../TucanoTestGUI` relative
+- For the `gui` service only: a sibling checkout of TatuTestGUI at `../TatuTestGUI` relative
   to this repository. Without it, start the API alone.
 
 Building the binary yourself additionally needs the Rust toolchain pinned by `rust-toolchain.toml`
@@ -44,20 +44,20 @@ will start. Copy the committed template and set both values:
 
 ```sh
 cp .env.example .env
-# edit .env: set TUCANO_JWT_SECRET (at least 32 bytes) and TUCANO_BOOTSTRAP_PASSWORD
+# edit .env: set TATU_JWT_SECRET (at least 32 bytes) and TATU_BOOTSTRAP_PASSWORD
 ```
 
 `docker compose` loads `.env` automatically from this directory, and the file is gitignored, so the
 secret never reaches a commit. Generate one with
 `node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("base64url"))'`. A
-missing `TUCANO_JWT_SECRET` or `TUCANO_BOOTSTRAP_PASSWORD` stops Compose with an error that names
+missing `TATU_JWT_SECRET` or `TATU_BOOTSTRAP_PASSWORD` stops Compose with an error that names
 the variable, rather than starting an anonymous stack.
 
 
 Four further knobs decide request ceilings rather than boot identity, and they fail closed at
-startup — an upgraded container that refuses to boot usually names one of them: `TUCANO_MAX_BODY_BYTES`
-(default 50 MiB), `TUCANO_REQUEST_TIMEOUT_MS` (default 300000; `0` disables the deadline),
-`TUCANO_MAX_CONCURRENCY` (default 128; `0` uncaps), and `TUCANO_LOCK_TIMEOUT_MS` (default 5000 —
+startup — an upgraded container that refuses to boot usually names one of them: `TATU_MAX_BODY_BYTES`
+(default 50 MiB), `TATU_REQUEST_TIMEOUT_MS` (default 300000; `0` disables the deadline),
+`TATU_MAX_CONCURRENCY` (default 128; `0` uncaps), and `TATU_LOCK_TIMEOUT_MS` (default 5000 —
 keep it below the container `stop_grace_period`, which is 30 s in the shipped file). The full
 contract, including what each refuses and why, is in the
 [configuration reference](../deployment/configuration-reference.md).
@@ -107,7 +107,7 @@ not in it, it does not exist. When this page and Swagger disagree, Swagger wins.
 | Path | What it is |
 | --- | --- |
 | `./data` on the host | The persistent state, created by Compose on first run |
-| `/data` in the container | The same directory, named by `TUCANO_DATA_DIR` |
+| `/data` in the container | The same directory, named by `TATU_DATA_DIR` |
 
 Because the contents are ordinary JSON, you can read, snapshot and archive them without the API.
 Deleting the container never deletes data; deleting the directory does. The container's root
@@ -118,9 +118,9 @@ Test data is never committed: `.gitignore` excludes `/data/*`.
 
 ## Authentication is on by default
 
-The shipped `docker-compose.yml` sets `TUCANO_AUTH_REQUIRED=true`, so the container you just started
+The shipped `docker-compose.yml` sets `TATU_AUTH_REQUIRED=true`, so the container you just started
 already guards every route except the public ones. The `.env` values are what it uses:
-`TUCANO_JWT_SECRET` signs the tokens and `TUCANO_BOOTSTRAP_USERNAME`/`TUCANO_BOOTSTRAP_PASSWORD`
+`TATU_JWT_SECRET` signs the tokens and `TATU_BOOTSTRAP_USERNAME`/`TATU_BOOTSTRAP_PASSWORD`
 create the first `systemAdmin` account — but only when the data directory holds no accounts at all,
 so it is a one-time step and harmless to leave in place (change the password afterwards, or remove
 the two variables).
@@ -130,7 +130,7 @@ does not set the variable runs anonymously. **That is only safe on a machine not
 reach.** The API is published on every interface (`3100:3000`), so if you want an unauthenticated
 stack that is still reachable from elsewhere, restrict the publish to loopback instead — change the
 mapping to `127.0.0.1:3100:3000`. To turn authentication off in this stack, set
-`TUCANO_AUTH_REQUIRED=false` in `.env`.
+`TATU_AUTH_REQUIRED=false` in `.env`.
 
 With authentication on, a guarded route without a token answers `401` with a challenge:
 
@@ -140,7 +140,7 @@ curl -si http://localhost:3100/projects
 
 ```
 HTTP/1.1 401 Unauthorized
-www-authenticate: Bearer realm="Tucano Test API"
+www-authenticate: Bearer realm="TatuTest API"
 
 {"error":{"code":"missing_token","message":"Authentication required","requestId":"…"}}
 ```
@@ -150,7 +150,7 @@ Log in and keep the access token:
 ```sh
 TOKEN=$(curl -s -X POST http://localhost:3100/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"<the TUCANO_BOOTSTRAP_PASSWORD from .env>"}' \
+  -d '{"username":"admin","password":"<the TATU_BOOTSTRAP_PASSWORD from .env>"}' \
   | python3 -c 'import sys, json; print(json.load(sys.stdin)["accessToken"])')
 ```
 
@@ -167,7 +167,7 @@ curl -s http://localhost:3100/auth/me -H "Authorization: Bearer $TOKEN"
 
 `roles` is the caller's project-scoped grants (`viewer`, `editor`, `owner`), and `systemAdmin`
 reaches everything. There is no grant-administration route yet: grants live in
-`$TUCANO_DATA_DIR/auth/` and are provisioned out of band. Access tokens are short-lived (`15m` by
+`$TATU_DATA_DIR/auth/` and are provisioned out of band. Access tokens are short-lived (`15m` by
 default); `POST /auth/refresh` exchanges the refresh token for a new pair, and refresh tokens are
 rotated on every use.
 
@@ -175,7 +175,7 @@ The variables, the RBAC rules and the public routes are described in full in the
 [Authentication section of the README](../../README.md#authentication) and decided in
 [docs/security/authentication-decision.md](../security/authentication-decision.md).
 
-Every setting above can instead come from an optional JSON file named by `TUCANO_CONFIG_FILE`, read
+Every setting above can instead come from an optional JSON file named by `TATU_CONFIG_FILE`, read
 once at startup. Precedence is resolved per key — environment, then file, then the built-in default
 — and a file that is unreadable, unparseable or carries an unknown key is a startup failure rather
 than a silent fallback. The template is
@@ -314,7 +314,7 @@ bootstrap credentials from `.env`; it signs in through `POST /auth/login` and pr
 every request:
 
 ```sh
-SMOKE_USERNAME=admin SMOKE_PASSWORD='<the TUCANO_BOOTSTRAP_PASSWORD from .env>' \
+SMOKE_USERNAME=admin SMOKE_PASSWORD='<the TATU_BOOTSTRAP_PASSWORD from .env>' \
   scripts/smoke.sh http://localhost:3100
 ```
 

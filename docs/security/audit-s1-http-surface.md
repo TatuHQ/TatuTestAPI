@@ -2,7 +2,7 @@
 
 *Every route in the served contract: authentication and authorization (authn/authz), object-level authorization and IDOR, identifier validation and path traversal, request-body and upload abuse, error-envelope and header disclosure, session and token lifecycle.*
 
-This is the S1 checkpoint of the security audit epic [#166](https://github.com/TucanoTechnology/TucanoTestAPI/issues/166), tracked by its own ticket [#176](https://github.com/TucanoTechnology/TucanoTestAPI/issues/176). It is the first of four surface reports — S1 *HTTP surface*, S2 *storage and filesystem* ([#177](https://github.com/TucanoTechnology/TucanoTestAPI/issues/177)), S3 *container and deployment* ([#178](https://github.com/TucanoTechnology/TucanoTestAPI/issues/178)), S4 *dependencies and supply chain* ([#179](https://github.com/TucanoTechnology/TucanoTestAPI/issues/179)). It carries findings only; nothing here is fixed.
+This is the S1 checkpoint of the security audit epic [#166](https://github.com/TatuHQ/TatuTestAPI/issues/166), tracked by its own ticket [#176](https://github.com/TatuHQ/TatuTestAPI/issues/176). It is the first of four surface reports — S1 *HTTP surface*, S2 *storage and filesystem* ([#177](https://github.com/TatuHQ/TatuTestAPI/issues/177)), S3 *container and deployment* ([#178](https://github.com/TatuHQ/TatuTestAPI/issues/178)), S4 *dependencies and supply chain* ([#179](https://github.com/TatuHQ/TatuTestAPI/issues/179)). It carries findings only; nothing here is fixed.
 
 > **Status of this file: the finished S1 report.**
 
@@ -11,7 +11,7 @@ This is the S1 checkpoint of the security audit epic [#166](https://github.com/T
 - **Findings so far:** 3 — F-176-1 (High), F-176-2 (Medium), F-176-3 (Low).
 - **Pass entries so far:** thirty.
 - **Executed:** S1-1 (enumerate and contract-diff), S1-2 (classify routes), S1-3 (anonymous + random-token probe), S1-4 (public surface), S1-5 (token lifecycle), S1-6 (role matrix), S1-7 (cross-project references and run scope), S1-8 (path traversal), S1-9 (upload abuse), S1-10 (error envelope, headers, logs), S1-11 (bounded DoS), S1-12 (sign-in enumeration, timing, throughput), S1-13 (boundary 9), S1-14 (auth-off parity). All fourteen sub-tasks executed.
-- **Throwaway stack:** torn down — see § 7. The operator's `tucano-test-api-1` / `tucano-test-gui-1` / `open-webui` containers were up before, during, and after the audit and were never touched.
+- **Throwaway stack:** torn down — see § 7. The operator's `tatu-test-api-1` / `tatu-test-gui-1` / `open-webui` containers were up before, during, and after the audit and were never touched.
 
 ---
 
@@ -24,16 +24,16 @@ This is the S1 checkpoint of the security audit epic [#166](https://github.com/T
 | `Cargo.lock` sha256 | `6bf59cc58933203d17f6fca19b3992217a108fdcef78e51c1334559a72fe3484` |
 | `openapi.json` sha256 | `5d95ee1254c0bad98a2089dfba0fe5853a84086df8ea54a7e40fd6e3c52e81dd` |
 | Image id (audit build) | `sha256:34cb67183ce6fdea8548e295e0fba64e0e3358bebd9614019dbe0852c6a33078` |
-| Worktree | `/home/emanuelec/.ao/data/worktrees/tucanotestapi/tucanotestapi-176` |
-| Throwaway data dir | `/tmp/audit-rev/data` → container `/data` (`TUCANO_DATA_DIR=/data`) |
+| Worktree | `/home/emanuelec/.ao/data/worktrees/tatutestapi/tatutestapi-176` |
+| Throwaway data dir | `/tmp/audit-rev/data` → container `/data` (`TATU_DATA_DIR=/data`) |
 
-**Note on the image id.** The image was built from this revision and tagged `tucano-test-audit:<rev>`; the id above is the immutable digest, so the container id reported by Docker cannot drift across re-tags. The image is retained (not pruned) so the tear-down is reproducible; see § 7.
+**Note on the image id.** The image was built from this revision and tagged `tatu-test-audit:<rev>`; the id above is the immutable digest, so the container id reported by Docker cannot drift across re-tags. The image is retained (not pruned) so the tear-down is reproducible; see § 7.
 
 Three throwaway containers were stood up for the three authentication configurations the report needs:
 
-- **`audit-a`** — `TUCANO_AUTH_REQUIRED` **off** (the "anonymous" arm), bound to `127.0.0.1:3210`.
-- **`audit-b`** — `TUCANO_AUTH_REQUIRED` **on** with a bootstrap system-admin account, bound to `127.0.0.1:3211`.
-- **`audit-c`** — `TUCANO_AUTH_REQUIRED` on plus `TUCANO_ACCESS_TOKEN_TTL=1s` (the token-lifecycle arm), bound to `127.0.0.1:3212`.
+- **`audit-a`** — `TATU_AUTH_REQUIRED` **off** (the "anonymous" arm), bound to `127.0.0.1:3210`.
+- **`audit-b`** — `TATU_AUTH_REQUIRED` **on** with a bootstrap system-admin account, bound to `127.0.0.1:3211`.
+- **`audit-c`** — `TATU_AUTH_REQUIRED` on plus `TATU_ACCESS_TOKEN_TTL=1s` (the token-lifecycle arm), bound to `127.0.0.1:3212`.
 
 All three run with a read-only root filesystem, a `tmpfs` `/tmp`, `no-new-privileges`, and the shared bind-mounted data dir.
 
@@ -41,7 +41,7 @@ All three run with a read-only root filesystem, a `tmpfs` `/tmp`, `no-new-privil
 
 ## 2. Throwaway target (step 2)
 
-The target is a throwaway installation of the pinned revision, seeded by [`scripts/seed.mjs`](../../scripts/seed.mjs) (issue [#193](https://github.com/TucanoTechnology/TucanoTestAPI/issues/193)), which builds the fixture projects, documents, folders, and attachments **through the HTTP API only**. The one documented exception is the auth accounts and grants of spec § 5, written by the binary's `seed-auth` subcommand via `TUCANO_SEED_AUTH_CMD` (for example `target/release/tucano-test seed-auth`).
+The target is a throwaway installation of the pinned revision, seeded by [`scripts/seed.mjs`](../../scripts/seed.mjs) (issue [#193](https://github.com/TatuHQ/TatuTestAPI/issues/193)), which builds the fixture projects, documents, folders, and attachments **through the HTTP API only**. The one documented exception is the auth accounts and grants of spec § 5, written by the binary's `seed-auth` subcommand via `TATU_SEED_AUTH_CMD` (for example `target/release/tatu-test seed-auth`).
 
 Provisioning (verbatim):
 
@@ -52,9 +52,9 @@ docker run -d --name audit-a --label ao.session="$AO_SESSION_ID" \
   -p 127.0.0.1:3210:3000 -v "$AUDIT_DATA":/data --read-only --tmpfs /tmp \
   --security-opt no-new-privileges:true "$AUDIT_IMAGE"
 # audit-b identical on 3211, plus:
-#   -e TUCANO_AUTH_REQUIRED=true -e TUCANO_JWT_SECRET=… -e TUCANO_BOOTSTRAP_USERNAME=auditor -e TUCANO_BOOTSTRAP_PASSWORD=…
+#   -e TATU_AUTH_REQUIRED=true -e TATU_JWT_SECRET=… -e TATU_BOOTSTRAP_USERNAME=auditor -e TATU_BOOTSTRAP_PASSWORD=…
 # audit-c identical on 3212, plus:
-#   -e TUCANO_ACCESS_TOKEN_TTL=1s
+#   -e TATU_ACCESS_TOKEN_TTL=1s
 # … then a health-wait loop, then `docker ps --filter label=ao.session=…`
 ```
 
@@ -75,11 +75,11 @@ Seeded identities:
 
 | Account | Password source | Role | Project grant |
 | --- | --- | --- | --- |
-| `auditor` | `TUCANO_BOOTSTRAP_PASSWORD` (bootstrap) | `systemAdmin` | all (global bypass) |
-| `viewer` | `TUCANO_SEED_VIEWER_PASSWORD` | `owner` | `checkout.json` |
-| `editor` | `TUCANO_SEED_EDITOR_PASSWORD` | `editor` | `checkout.json` |
+| `auditor` | `TATU_BOOTSTRAP_PASSWORD` (bootstrap) | `systemAdmin` | all (global bypass) |
+| `viewer` | `TATU_SEED_VIEWER_PASSWORD` | `owner` | `checkout.json` |
+| `editor` | `TATU_SEED_EDITOR_PASSWORD` | `editor` | `checkout.json` |
 
-No seeded account holds a grant on `payments.json`, and **no API route creates an account or sets a grant** — accounts and grants are provisioned out of band under `TUCANO_DATA_DIR/auth/`, read from `auth/projects/<project>.json`. This is a recorded observation (O-176-9), not a finding.
+No seeded account holds a grant on `payments.json`, and **no API route creates an account or sets a grant** — accounts and grants are provisioned out of band under `TATU_DATA_DIR/auth/`, read from `auth/projects/<project>.json`. This is a recorded observation (O-176-9), not a finding.
 
 ---
 
@@ -192,7 +192,7 @@ The served contract is the `openapi.json` document, which was enumerated and cro
 - **Reproduction:** POST a raw XML body `"<r>" + "<a>"*depth + "</a>"*depth + "</r>"` (7×(depth+1) bytes) with `content-type: application/xml` to a scratch run's `/import/junit`. Depths below ~3,405 elements answer `200` (imported: 0 or 1); at or beyond ~3,410 the process aborts. A flat document of the same byte count is accepted (`400 Malformed JUnit XML` or `200 imported: 0`) with the process alive — the crash is driven by *nesting*, not size.
 - **Observed:** the ladder `100→200 (701 B)`, `1000→200 (7,001 B)`, `2000→200 (14,001 B)`, `3300→200 (23,107 B)`, `3400→200 (23,807 B)`, `3405→200 (23,842 B)`, then **`3410→abort (23,877 B)`**, and `3415`, `3420`, `3440`, `3450`, `3460`, `3600`, `4000`, `5000`, `10000` all abort. The control flat document (28,045 B) answered `400 Malformed JUnit XML` with the process alive; a flat 28,007 B document answered `200 imported: 0`; an *unclosed* document of 12,001 B aborts too. The container exits with status 139, `RestartCount` unchanged (no auto-restart), and `docker logs` records `thread 'tokio-rt-worker' (n) has overflowed its stack` plus `fatal runtime error: stack overflow, aborting`. The arm-A (auth off, no credentials) run at depth 4000 aborts identically. JSON import is safe: a 10,000-item JSON body imports (200, `imported: 10000`) and a 10,000-deep nested JSON object is refused (`400 "Import body must be valid JSON"`). DOCTYPE/XXE/billion-laughs and bad UTF-8 are already refused (`400 "Malformed JUnit XML"` / `"JUnit XML must be valid UTF-8"`).
 - **Expected:** a request body that is too deeply nested must be refused with a stable, safe client error, not crash the process. Invariant 3 — "Client-visible errors use stable codes and safe messages with request IDs." An abort sends no code at all: the connection is reset, and every other tenant loses availability.
-- **Impact:** remote denial of service on the whole installation, not confined to the caller. With `TUCANO_AUTH_REQUIRED` on (the shipped default) the caller needs a granted `editor` role on the run's project — exploitability Moderate; the crash takes down every tenant — impact **Severe**. Moderate × Severe = **High**. With auth off the base cell is Trivial × Severe = Critical, de-escalated one level (the project no longer recommends auth off) → also High.
+- **Impact:** remote denial of service on the whole installation, not confined to the caller. With `TATU_AUTH_REQUIRED` on (the shipped default) the caller needs a granted `editor` role on the run's project — exploitability Moderate; the crash takes down every tenant — impact **Severe**. Moderate × Severe = **High**. With auth off the base cell is Trivial × Severe = Critical, de-escalated one level (the project no longer recommends auth off) → also High.
 - **Suggested fix:** enforce a maximum element-nesting depth in the JUnit importer (roxmltree bounds entity/reference depth at 10 but not element depth), so an over-deep document is rejected as `400 invalid_request` before recursion exhausts the worker stack. Add a regression test that posts an over-deep JUnit document and asserts `400` (the `tests/` import test that would close this gap does not yet exist).
 - **CWE:** CWE-674 (Uncontrolled Recursion).
 - **Duplicates / prerequisites:** none. The JUnit import path is distinct from JSON import, and DOCTYPE/XXE handling is already correct, so this is a separate gap.
@@ -241,7 +241,7 @@ These are verified behaviors the audit could not turn into a finding — either 
 - **O-176-10 — Identifier-error behavior diverges between auth on and off.** A no-grant caller to an ambiguous/unknown identifier receives `403` with auth on but `404`/`400`/`500` with auth off, because authorization is decided before existence and `grant_path` builds the grants filename before route validation. The `409 conflict` on a globally-ambiguous identifier (an id held by two projects) is returned to both `viewer` and `systemAdmin`, which closes the existence oracle for scoped reads.
 - **O-176-11 — Sign-in is not throttled and does not distinguish accounts.** 200 sequential failures for a wrong password and for a non-existent user are indistinguishable (p50 ≈ 0.0199 s vs 0.0198 s, one `401 invalid_credentials` shape; a decoy Argon2 hash is verified for unknown users). 200 parallel valid logins all succeed with no `429`. This is an Info-level observation (CWE-307) and is carried as such rather than as a finding.
 - **O-176-12 — The `/reports/summary` existence oracle is a credited control.** `?milestoneId=<no-such>` answers `404`, but a no-grant caller probing a *real* project is answered `403` before existence is checked, so the report routes cannot be used to enumerate milestones/projects.
-- **O-176-13 — S3's `F-178-1` Critical premise was already fixed before the audited revision.** The design brief and S3 recorded that the shipped default was `TUCANO_AUTH_REQUIRED` off; commit `5b69ba3` made the default **on** (`docker-compose.yml:17 TUCANO_AUTH_REQUIRED: "${TUCANO_AUTH_REQUIRED:-true}"`). This report's severity axes for auth-off are therefore always reported as de-escalated (the project no longer recommends that mode).
+- **O-176-13 — S3's `F-178-1` Critical premise was already fixed before the audited revision.** The design brief and S3 recorded that the shipped default was `TATU_AUTH_REQUIRED` off; commit `5b69ba3` made the default **on** (`docker-compose.yml:17 TATU_AUTH_REQUIRED: "${TATU_AUTH_REQUIRED:-true}"`). This report's severity axes for auth-off are therefore always reported as de-escalated (the project no longer recommends that mode).
 
 ---
 
@@ -249,11 +249,11 @@ These are verified behaviors the audit could not turn into a finding — either 
 
 A control the audit tested and could not break is recorded as a pass entry, with the test that proves it. Entries reference the trust boundary and security invariant they exercise; where the automated suite does not yet pin the control, the gap names the test that would close it.
 
-1. **Anonymous callers are refused everywhere except the public surface.** Every guarded operation answered `401 missing_token` + `WWW-Authenticate: Bearer realm="Tucano Test API"` to an unauthenticated request (S1-3). *Boundary 1 / Invariant 3.* Pinned by the hand-marked public surface in `tests/service.rs` and the anonymous-refusal matrix in `tests/auth.rs`.
+1. **Anonymous callers are refused everywhere except the public surface.** Every guarded operation answered `401 missing_token` + `WWW-Authenticate: Bearer realm="TatuTest API"` to an unauthenticated request (S1-3). *Boundary 1 / Invariant 3.* Pinned by the hand-marked public surface in `tests/service.rs` and the anonymous-refusal matrix in `tests/auth.rs`.
 2. **A random 32-byte bearer is refused everywhere.** 78/78 guarded operations answered `401 invalid_token` to a well-formed but unissued token. *Boundary 1.*
 3. **The public surface is exactly seven routes.** `GET /health`, `GET /ready`, `GET /openapi.json`, `GET /api-docs`, `GET /diagnostics`, `POST /auth/login`, `POST /auth/refresh` — nothing more. *Boundary 1.* Pinned by the five-public-endpoints tests in `tests/auth.rs` (two Swagger mounts are additional, recorded in § 3 drift).
 4. **Token integrity is enforced.** Tampered payload, tampered signature, `alg=none` (four spellings), HS256 with a wrong or empty secret, a missing signature, and a non-base64 signature all answered `401 invalid_token`. *Boundary 1 / Invariant 7.*
-5. **Access-token expiry is enforced.** On arm `audit-c` (`TUCANO_ACCESS_TOKEN_TTL=1s`) the login returns `expiresIn: 1`, the token is accepted at t+0 and rejected at t+2 as `401 token_expired` with `WWW-Authenticate: … error="invalid_token"`. *Boundary 1.*
+5. **Access-token expiry is enforced.** On arm `audit-c` (`TATU_ACCESS_TOKEN_TTL=1s`) the login returns `expiresIn: 1`, the token is accepted at t+0 and rejected at t+2 as `401 token_expired` with `WWW-Authenticate: … error="invalid_token"`. *Boundary 1.*
 6. **Refresh tokens are single-use.** A second spend of the same refresh token answered `401 invalid_refresh_token`; two concurrent spends produced exactly one `200` (5/5 and 6/6 rounds). *Boundary 1 / Invariant 7.*
 7. **Logout revokes the refresh token.** `refresh` after `logout` answered `401` (the still-valid access token is O-176-5). *Boundary 1.*
 8. **The role matrix holds.** `viewer`/`editor` read `checkout.json` (`200`) and are refused `payments.json` (`403`, except a run whose id points there → `404`); `systemAdmin` reads everything; write attempts across the grant boundary (`viewer` PUT/DELETE payments, `editor` PUT/DELETE checkout) answered `403`. *Boundary 1.* Pinned by `tests/auth.rs`.
@@ -307,7 +307,7 @@ The throwaway stack was removed at the end of the audit. Results:
 | Remove the host throwaway dir | `rm -rf /tmp/audit-rev/data && rm -rf /tmp/audit-rev` | `ls -d /tmp/audit-rev` → "No such file or directory" |
 | Confirm no tracked containers remain | `docker ps -a --filter label=ao.session=…` | empty |
 
-**Live at the end of the audit:** the operator's `tucano-test-api-1`, `tucano-test-gui-1`, and `open-webui` containers were `Up` before, during, and after the audit and were never touched. The audit image `tucano-test-audit:096835bc…` (id `34cb67183ce6`) is retained for reproducibility, as are the earlier `tucano-test-audit:latest`, `tucano-test-audit:c5e9943…`, and `tucano-test-audit-177:c5e9943` tags. The repository working tree was pristine throughout: `git status --porcelain` is empty at `096835bc…`, and the seeded data tree (62 files / 61 directories) was restored to a name set identical to the seed listing before teardown.
+**Live at the end of the audit:** the operator's `tatu-test-api-1`, `tatu-test-gui-1`, and `open-webui` containers were `Up` before, during, and after the audit and were never touched. The audit image `tatu-test-audit:096835bc…` (id `34cb67183ce6`) is retained for reproducibility, as are the earlier `tatu-test-audit:latest`, `tatu-test-audit:c5e9943…`, and `tatu-test-audit-177:c5e9943` tags. The repository working tree was pristine throughout: `git status --porcelain` is empty at `096835bc…`, and the seeded data tree (62 files / 61 directories) was restored to a name set identical to the seed listing before teardown.
 
 ---
 

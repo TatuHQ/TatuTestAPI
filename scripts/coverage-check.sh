@@ -34,9 +34,9 @@ mkdir -p "$(dirname "$LOG")"
 : >"$LOG"
 
 echo "coverage-check: recording to $LOG"
-TUCANO_ROUTE_LOG="$LOG" cargo test --all-targets --all-features
+TATU_ROUTE_LOG="$LOG" cargo test --all-targets --all-features
 
 echo "coverage-check: checking the recording"
 # --nocapture so the summary line — how many of the documented operations were
 # reached, and how many answered successfully — is visible on a green run.
-TUCANO_ROUTE_LOG="$LOG" TUCANO_ROUTE_LOG_ASSERT=1 cargo test --test route_coverage -- --nocapture
+TATU_ROUTE_LOG="$LOG" TATU_ROUTE_LOG_ASSERT=1 cargo test --test route_coverage -- --nocapture

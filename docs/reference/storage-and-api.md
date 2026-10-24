@@ -1,13 +1,13 @@
 # Storage Concept and API Reference
 
-This document is the detailed reference for the Tucano Test domain model, HTTP API surface,
+This document is the detailed reference for the TatuTest domain model, HTTP API surface,
 authentication, configuration, error contract, and scaling behaviour. The [repository
 README](../../README.md) keeps a short overview of each area for developers; this page holds the
 full specification.
 
 ## Storage concept
 
-Tucano Test is a **file-based test case management system**: there is no database. All state is
+TatuTest is a **file-based test case management system**: there is no database. All state is
 kept as folders and JSON files on the filesystem, and everything is managed through the HTTP API —
 create, read, update, delete, and duplicate. The GUI and the API are equal citizens: every GUI
 action has an API equivalent, and no client ever touches the storage directory directly.
@@ -18,7 +18,7 @@ described below, and a running deployment writes a working example of all of it 
 back: see the [test-data generator](../../README.md#test-data-generator).
 
 ```text
-TUCANO_DATA_DIR/
+TATU_DATA_DIR/
 └── projects/
     └── <project>/
         ├── project.json                 project details
@@ -175,10 +175,10 @@ absent from `openapi.json`; the documented way to list a project's runs, milesto
 configurations is the parent-scoped route.
 
 ## Authentication
-The service's own default remains `TUCANO_AUTH_REQUIRED=false`; the shipped Compose file is the safe default, not the service — a deployment that supplies its own container definition and does not opt in still runs anonymously (audit finding F-178-1).
+The service's own default remains `TATU_AUTH_REQUIRED=false`; the shipped Compose file is the safe default, not the service — a deployment that supplies its own container definition and does not opt in still runs anonymously (audit finding F-178-1).
 
 
-With `TUCANO_AUTH_REQUIRED` turned on, every operation but `GET /health`, `GET /ready`,
+With `TATU_AUTH_REQUIRED` turned on, every operation but `GET /health`, `GET /ready`,
 `GET /diagnostics`, `GET /metrics`, `GET /openapi.json`, `GET /api-docs`, `POST /auth/login`, and
 `POST /auth/refresh` requires a bearer access token and is
 authorized against **project-scoped RBAC**: a role (`viewer`, `editor`, `owner`) granted per project,
@@ -193,35 +193,35 @@ names.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `TUCANO_DATA_DIR` | `./data` | The only state: where projects, cases, runs and the `auth/` store live. Environment-only. |
+| `TATU_DATA_DIR` | `./data` | The only state: where projects, cases, runs and the `auth/` store live. Environment-only. |
 | `PORT` | `3000` | The port the API binds. Environment-only. |
-| `TUCANO_CONFIG_FILE` | — | Path to the optional configuration file described below. Environment-only; unset means no file. |
-| `TUCANO_CONFIG_KEY_FILE` | — | Path to the key ring file for decrypting AEAD-encrypted secrets in the configuration file. Environment-only; unset means no encryption keys. |
-| `TUCANO_LOCK_TIMEOUT_MS` | `5000` | Milliseconds a write waits for the advisory lock before it is refused with `503 lock_timeout`. Environment-only; must be a whole number, and anything else stops startup. An empty value is not a number but keeps the default, like an unset one. |
-| `TUCANO_MAX_BODY_BYTES` | `52428800` | Largest request body the router accepts, bytes. Environment-only; a whole number above zero, and anything else stops startup (#103). |
-| `TUCANO_REQUEST_TIMEOUT_MS` | `300000` | Wall clock a request may take before the `504` `request_timeout` answer cuts it off. `0` disables the deadline. Environment-only; a whole number or startup stops (#103). |
-| `TUCANO_MAX_CONCURRENCY` | `128` | Requests in flight before the `503` `service_unavailable` refusal with `Retry-After`. `0` removes the cap. Environment-only; a whole number or startup stops (#103). |
-| `TUCANO_AUTH_REQUIRED` | `false` | Require and enforce a bearer token on every guarded route. When off, every guard returns and the API is anonymous. |
-| `TUCANO_JWT_SECRET` | — | The HS256 signing secret. Required when auth is on; at least 32 bytes. |
-| `TUCANO_JWT_SECRET_FILE` | — | A file to read the secret from. Set this **or** `TUCANO_JWT_SECRET`, never both. |
-| `TUCANO_ACCESS_TOKEN_TTL` | `15m` | Access-token lifetime; accepts a duration such as `900s` or `15m`. |
-| `TUCANO_REFRESH_TOKEN_TTL` | `14d` | Refresh-token lifetime. Refresh tokens are rotated on every use. |
-| `TUCANO_BOOTSTRAP_USERNAME` | — | A `systemAdmin` account created at startup when the store held no accounts. Set with `TUCANO_BOOTSTRAP_PASSWORD`. |
-| `TUCANO_BOOTSTRAP_PASSWORD` | — | The password for the bootstrap account, stored only as an Argon2id hash. |
+| `TATU_CONFIG_FILE` | — | Path to the optional configuration file described below. Environment-only; unset means no file. |
+| `TATU_CONFIG_KEY_FILE` | — | Path to the key ring file for decrypting AEAD-encrypted secrets in the configuration file. Environment-only; unset means no encryption keys. |
+| `TATU_LOCK_TIMEOUT_MS` | `5000` | Milliseconds a write waits for the advisory lock before it is refused with `503 lock_timeout`. Environment-only; must be a whole number, and anything else stops startup. An empty value is not a number but keeps the default, like an unset one. |
+| `TATU_MAX_BODY_BYTES` | `52428800` | Largest request body the router accepts, bytes. Environment-only; a whole number above zero, and anything else stops startup (#103). |
+| `TATU_REQUEST_TIMEOUT_MS` | `300000` | Wall clock a request may take before the `504` `request_timeout` answer cuts it off. `0` disables the deadline. Environment-only; a whole number or startup stops (#103). |
+| `TATU_MAX_CONCURRENCY` | `128` | Requests in flight before the `503` `service_unavailable` refusal with `Retry-After`. `0` removes the cap. Environment-only; a whole number or startup stops (#103). |
+| `TATU_AUTH_REQUIRED` | `false` | Require and enforce a bearer token on every guarded route. When off, every guard returns and the API is anonymous. |
+| `TATU_JWT_SECRET` | — | The HS256 signing secret. Required when auth is on; at least 32 bytes. |
+| `TATU_JWT_SECRET_FILE` | — | A file to read the secret from. Set this **or** `TATU_JWT_SECRET`, never both. |
+| `TATU_ACCESS_TOKEN_TTL` | `15m` | Access-token lifetime; accepts a duration such as `900s` or `15m`. |
+| `TATU_REFRESH_TOKEN_TTL` | `14d` | Refresh-token lifetime. Refresh tokens are rotated on every use. |
+| `TATU_BOOTSTRAP_USERNAME` | — | A `systemAdmin` account created at startup when the store held no accounts. Set with `TATU_BOOTSTRAP_PASSWORD`. |
+| `TATU_BOOTSTRAP_PASSWORD` | — | The password for the bootstrap account, stored only as an Argon2id hash. |
 
 The defaults above are the **service's** built-in defaults. The shipped `docker-compose.yml`
-overrides one of them: it sets `TUCANO_AUTH_REQUIRED=true` and takes `TUCANO_JWT_SECRET` and the
+overrides one of them: it sets `TATU_AUTH_REQUIRED=true` and takes `TATU_JWT_SECRET` and the
 bootstrap pair from `.env`, so the local Compose stack is authenticated while a deployment that
 supplies its own container definition starts anonymous.
 
-Accounts and grants live beside the data, under `TUCANO_DATA_DIR/auth/`; the deployment stays
+Accounts and grants live beside the data, under `TATU_DATA_DIR/auth/`; the deployment stays
 database-free. The decision of record is
 [docs/security/authentication-decision.md](../security/authentication-decision.md) and the
 enforcement matrix lives in `tests/auth.rs`.
 
 ### Configuration file
 
-Every setting above can also be supplied by an optional JSON file named by `TUCANO_CONFIG_FILE`.
+Every setting above can also be supplied by an optional JSON file named by `TATU_CONFIG_FILE`.
 The file is read **once at startup**, before the listener binds, into an immutable value: a file the
 server cannot read, cannot parse, or does not recognise is a startup failure, never a request
 failure and never a silent fallback. The model and its rationale are in
@@ -242,18 +242,18 @@ failure and never a silent fallback. The model and its rationale are in
 ```
 
 ```sh
-TUCANO_CONFIG_FILE=/etc/tucano-test/config.json \
-  ./tucano-test
+TATU_CONFIG_FILE=/etc/tatu-test/config.json \
+  ./tatu-test
 ```
 
 - **Precedence is resolved per key, not per source: environment, then file, then the built-in
-  default.** A file that sets `access_token_ttl` while the environment sets `TUCANO_JWT_SECRET`
+  default.** A file that sets `access_token_ttl` while the environment sets `TATU_JWT_SECRET`
   applies both; the environment wins only where the two name the same setting.
 - **`version` is mandatory and must be `1`.** A file declaring another version is refused by number
   rather than half-read.
 - **Unknown keys are refused.** A typo in a key name is a startup error instead of a setting that
   silently never applies.
-- **Absence changes nothing.** With `TUCANO_CONFIG_FILE` unset no file is consulted at all, so an
+- **Absence changes nothing.** With `TATU_CONFIG_FILE` unset no file is consulted at all, so an
   existing environment-only deployment behaves exactly as before. There is deliberately no implicit
   default path — a stray file in a writable directory must not be able to change a deployment
   silently.
@@ -265,7 +265,7 @@ TUCANO_CONFIG_FILE=/etc/tucano-test/config.json \
 - **Startup errors name the setting and never the value.** No error line, log record, or response
   contains a secret's value, the configuration file's raw path, or its contents.
 
-`TUCANO_DATA_DIR`, `PORT`, `TUCANO_CONFIG_FILE` and `TUCANO_CONFIG_KEY_FILE` stay
+`TATU_DATA_DIR`, `PORT`, `TATU_CONFIG_FILE` and `TATU_CONFIG_KEY_FILE` stay
 environment-only: all four must be readable *before* the file can be located or its secrets
 decrypted, and the orchestrator owns all four. See
 [docs/security/configuration-decision.md](../security/configuration-decision.md) for the
@@ -287,7 +287,7 @@ additionally carries a `WWW-Authenticate: Bearer realm="…"` challenge.
 Two answers do not use the envelope, because they come from the router or an extractor rather than from a
 handler:
 
-- A request body larger than `TUCANO_MAX_BODY_BYTES` (default 50 MiB) is refused by the router's size limit with `413` and the plain-text body
+- A request body larger than `TATU_MAX_BODY_BYTES` (default 50 MiB) is refused by the router's size limit with `413` and the plain-text body
   `length limit exceeded`. The limit applies to every route, so it is checked before any handler runs.
 - A body the multipart extractor cannot frame — an upload sent as JSON, or without a boundary — is answered
   with `400 text/plain`. Once the framing parses, upload rejections use the structured envelope
@@ -312,7 +312,7 @@ The full reconciliation of the documented error contract and schema strictness i
 
 ## Auditing
 
-Every operation that changes the store writes exactly one `tucano.audit` event: the `action`
+Every operation that changes the store writes exactly one `tatu.audit` event: the `action`
 (`create`, `update`, `delete`, `duplicate`, `copy`, `move`, `record`, `import`, …), the `resource`
 noun, the `id` written, the `user` who wrote it, and the `outcome` — with the error `code` when the
 write was refused. `user` is the authenticated account the request carried; on a deployment that
@@ -321,7 +321,7 @@ enforces no authentication it is the explicit `-`, never an empty string posing 
 attempted), `refresh` (a spent or unknown token is recorded as `replay` — the theft signal), and
 `logout` (with whether a live token actually came down). The trail carries no bodies, tokens,
 passwords or hashes, so it can be kept without keeping a secret; route it anywhere with a
-`TUCANO_LOG` directive on the `tucano.audit` target, and the `http.request` span carries the same
+`TATU_LOG` directive on the `tatu.audit` target, and the `http.request` span carries the same
 `user` so a request and its writes join on the request id.
 
 ## Scaling and statelessness
@@ -338,19 +338,19 @@ disclose existence in tenants the caller cannot see (#422). Ambiguity within rea
 documented `409`, and a trusted deployment keeps every genuine `404`.
 
 The API process is stateless: replicas do not keep sessions or in-memory records. Horizontal scaling
-requires a shared persistent POSIX volume mounted at the same `TUCANO_DATA_DIR` for every replica.
+requires a shared persistent POSIX volume mounted at the same `TATU_DATA_DIR` for every replica.
 Repository mutations use an advisory lock file and atomic same-directory renames. An atomic publish
 is complete only when the DIRECTORY agrees: after every rename, unlink and attachment creation the
 owning directory is fsynced best-effort, so a write acknowledged across a power loss is a write that
 comes back — and a revoked grant, synced before the project folder is deleted, never resurrects
 (#423). A write that
-cannot take the lock within `TUCANO_LOCK_TIMEOUT_MS` (default `5000` ms) is refused with
+cannot take the lock within `TATU_LOCK_TIMEOUT_MS` (default `5000` ms) is refused with
 `503 lock_timeout` and a `Retry-After`, so a busy volume is answered rather than queued behind
 indefinitely. Two ceilings stand beside it on the request path
-(#103): a request that outlives `TUCANO_REQUEST_TIMEOUT_MS` is cut off with `504
+(#103): a request that outlives `TATU_REQUEST_TIMEOUT_MS` is cut off with `504
 request_timeout` — and because the storage layer publishes atomically, a write already handed to it
 when the deadline fired still ends as a whole document or the old one, never a half, so the answer
-means 'unknown', never 'half done' — and while `TUCANO_MAX_CONCURRENCY` requests are in flight new
+means 'unknown', never 'half done' — and while `TATU_MAX_CONCURRENCY` requests are in flight new
 ones are refused with `503 service_unavailable` and a `Retry-After` rather than queued by the
 server. Both guards sit outside the body limit inside the request-id and tracing layers, so a
 refusal still carries a request id, appears in the metrics, and answers the same envelope as any
@@ -414,15 +414,15 @@ credentials, because it signs in rather than calling anonymously.
 ### Tearing down the seed
 
 ```sh
-TUCANO_BOOTSTRAP_USERNAME=admin \
-TUCANO_BOOTSTRAP_PASSWORD=admin-password \
+TATU_BOOTSTRAP_USERNAME=admin \
+TATU_BOOTSTRAP_PASSWORD=admin-password \
   node scripts/teardown.mjs http://localhost:3000
 ```
 
 It exits 0 when the seed's entities are gone or were never there, and 1 when something could not be
 resolved — naming every item it left in place and why. See the [test-data generator
 guide](../testing/test-data-generator-guide.md) for the environment variables, including
-`TUCANO_UNSEED_AUTH_CMD`, which is needed for the seeded account to be removed as well.
+`TATU_UNSEED_AUTH_CMD`, which is needed for the seeded account to be removed as well.
 
 ### Clearing data
 

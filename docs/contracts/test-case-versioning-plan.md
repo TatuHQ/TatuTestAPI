@@ -1,15 +1,15 @@
 # Test Case Versioning Plan (Issue #89)
 
-Issue: [#89](https://github.com/TucanoTechnology/TucanoTestAPI/issues/89) — the design step split from
-[#52](https://github.com/TucanoTechnology/TucanoTestAPI/issues/52) (which folded in the duplicate
-[#38](https://github.com/TucanoTechnology/TucanoTestAPI/issues/38)). This plan records field names, snapshot
+Issue: [#89](https://github.com/TatuHQ/TatuTestAPI/issues/89) — the design step split from
+[#52](https://github.com/TatuHQ/TatuTestAPI/issues/52) (which folded in the duplicate
+[#38](https://github.com/TatuHQ/TatuTestAPI/issues/38)). This plan records field names, snapshot
 shape, trigger rules, and addressing for test-case versioning and revision audit history. It is documentation
 only: no code, no schema, and no stored document changes with this issue.
 
 `docs/contracts/api-compatibility.md` remains the compatibility authority and the place a plan of record is
 expected to live. It is a protected file on the API (code) track, so the *Test case versioning* section inside
 it and its pointer back to this file are deferred to that track; the deferral is recorded on
-[#89](https://github.com/TucanoTechnology/TucanoTestAPI/issues/89). Until that section lands, **this file is the
+[#89](https://github.com/TatuHQ/TatuTestAPI/issues/89). Until that section lands, **this file is the
 recorded plan**.
 
 ## Current state (implemented)

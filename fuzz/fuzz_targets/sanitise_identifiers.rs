@@ -16,7 +16,7 @@
 use std::path::{Component, Path};
 
 use libfuzzer_sys::fuzz_target;
-use tucano_test::storage::{
+use tatu_test::storage::{
     Parent, Resource, attachment_path, case_dir, case_marker, ensure_within, folder_name,
     folder_wire_id, node_folder, revision_marker, step_attachment_path, step_dir, suite_dir,
     validate_component, validate_document_id,

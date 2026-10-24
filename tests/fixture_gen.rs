@@ -133,7 +133,7 @@ async fn generate() {
         json_request(
             "POST",
             "/test_runs/release-1.json/results/TC-101/defects",
-            &json!({"defectId": "42", "defectUrl": "https://github.com/tucanotechnology/example/issues/42", "trackerType": "github", "title": "direct case fails"}),
+            &json!({"defectId": "42", "defectUrl": "https://github.com/tatuhq/example/issues/42", "trackerType": "github", "title": "direct case fails"}),
         ),
     )
     .await;

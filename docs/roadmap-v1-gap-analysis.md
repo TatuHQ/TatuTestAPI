@@ -269,7 +269,7 @@ v1.0.0 is ready to tag when:
 - [x] Local CI gate green: `cargo fmt`, `cargo clippy`, `cargo test`,
   `cargo build --release`, `actionlint`
 - [ ] Tag `v1.0.0` pushed to `main`, triggering the release workflow
-- [ ] GHCR image `ghcr.io/tucanotechnology/tucanotestapi:v1.0.0` published
+- [ ] GHCR image `ghcr.io/tatuhq/tatutestapi:v1.0.0` published
 - [ ] GitHub Release created with release notes
 
 ### 6.2 Milestone Scheme
@@ -404,7 +404,7 @@ Each sub-task is executable without clarification by a flash execution lane.
 
 - **Files:** None (git tag only)
 - **Acceptance test:** `v1.0.0` tag exists on `main`; GHCR image
-  `ghcr.io/tucanotechnology/tucanotestapi:v1.0.0` is published; GitHub Release
+  `ghcr.io/tatuhq/tatutestapi:v1.0.0` is published; GitHub Release
   exists.
 - **Model label:** `model:mid`
 - **Complexity:** S

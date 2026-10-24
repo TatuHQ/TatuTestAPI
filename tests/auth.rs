@@ -22,12 +22,12 @@ use axum::http::{HeaderMap, Request, StatusCode, header};
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use std::path::Path;
-use tempfile::TempDir;
-use tower::ServiceExt;
-use tucano_test::auth::{
+use tatu_test::auth::{
     AuthConfig, AuthStore, Role, User, hash_password, hash_refresh_token, login, refresh,
 };
-use tucano_test::{api, repository::FileRepository};
+use tatu_test::{api, repository::FileRepository};
+use tempfile::TempDir;
+use tower::ServiceExt;
 
 use common::{ROLE_CHECKED_WRITE_OPERATIONS, assert_challenge, role_checked_write};
 
@@ -739,7 +739,7 @@ async fn an_expired_access_token_is_refused_as_expired_over_the_router() {
     let app = enforcing_app(directory.path());
     // Signed by the deployment's own secret, minted in 2023, valid for
     // fifteen minutes: the only thing wrong with it is that time moved.
-    let stale = tucano_test::auth::mint_access_token(
+    let stale = tatu_test::auth::mint_access_token(
         SECRET,
         "account-1",
         false,
@@ -2125,7 +2125,7 @@ fn a_refresh_token_exchanges_at_most_once_under_concurrent_replay() {
 #[tokio::test]
 async fn deleting_a_project_forgets_its_grants() {
     let (directory, app) = common::test_app();
-    let store = tucano_test::auth::AuthStore::new(directory.path()).expect("store");
+    let store = tatu_test::auth::AuthStore::new(directory.path()).expect("store");
 
     let (status, body) = common::send_json(
         &app,

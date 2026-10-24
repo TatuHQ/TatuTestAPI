@@ -1,8 +1,8 @@
 mod common;
 
+use tatu_test::repository::{FileRepository, Repository, Resource};
+use tatu_test::storage::Parent;
 use tempfile::TempDir;
-use tucano_test::repository::{FileRepository, Repository, Resource};
-use tucano_test::storage::Parent;
 
 /// Helper to create a test repository with a temporary directory
 fn setup_test_repo() -> (FileRepository, TempDir) {
@@ -193,7 +193,7 @@ mod hardlink_tests {
         // 1. A document: the stored path is ordinary; the bytes behind the
         // name live outside the root. The project's own document is its
         // marker file, exactly the layout the ticket's repro plants.
-        let doc = tucano_test::storage::layout::project_marker(&root, "checkout.json")
+        let doc = tatu_test::storage::layout::project_marker(&root, "checkout.json")
             .expect("project document path");
         std::fs::remove_file(&doc).unwrap();
         std::fs::write(&outside, br#"{"projectId":"checkout","name":"STOLEN"}"#).unwrap();
@@ -220,7 +220,7 @@ mod hardlink_tests {
 
         // 2. A revision snapshot — served verbatim by the history routes.
         std::fs::write(&outside, br#"{"testCaseId":"STOLEN"}"#).unwrap();
-        let revision = tucano_test::storage::layout::revision_marker(&root, &parent, "TC-001", 1)
+        let revision = tatu_test::storage::layout::revision_marker(&root, &parent, "TC-001", 1)
             .expect("revision path");
         std::fs::create_dir_all(revision.parent().unwrap()).unwrap();
         std::fs::hard_link(&outside, &revision).unwrap();
@@ -232,7 +232,7 @@ mod hardlink_tests {
 
         // 3. A grant document — not served by any route, but read on every
         // authorization decision.
-        let store = tucano_test::auth::AuthStore::new(&root).unwrap();
+        let store = tatu_test::auth::AuthStore::new(&root).unwrap();
         let grants_dir = root.join("auth").join("projects");
         std::fs::create_dir_all(&grants_dir).unwrap();
         std::fs::write(&outside, br#"{"users":{}}"#).unwrap();
@@ -247,7 +247,7 @@ mod hardlink_tests {
         // walked the source folder with `fs::copy`, which follows planted
         // names — it would have materialised outside bytes into the tree.
         std::fs::write(&outside, b"outside content").unwrap();
-        let case_doc = tucano_test::storage::layout::case_marker(&root, &parent, "TC-001")
+        let case_doc = tatu_test::storage::layout::case_marker(&root, &parent, "TC-001")
             .expect("case document path");
         let case_folder = case_doc.parent().unwrap();
         std::fs::hard_link(&outside, case_folder.join("planted.bin")).unwrap();
@@ -264,7 +264,7 @@ mod hardlink_tests {
                 &parent,
                 "TC-001",
                 &Parent::Project("beta.json".to_owned()),
-                tucano_test::storage::Placement::Copy,
+                tatu_test::storage::Placement::Copy,
             )
             .expect_err("the copy must refuse the planted name");
         assert_eq!(error.kind(), std::io::ErrorKind::PermissionDenied);
