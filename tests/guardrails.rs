@@ -155,7 +155,10 @@ async fn a_cancelled_request_leaves_the_store_clean_and_writable() {
     let directory = tempfile::TempDir::new().expect("temp dir");
     let app = app_at_with_guardrails(
         directory.path(),
-        guardrails(MAX_BODY_BYTES, Some(Duration::from_millis(60)), Some(4)),
+        // The test aborts the request after 20ms; the guardrail must be long
+        // enough that the follow-up write is not the thing it cuts off on a
+        // loaded CI runner.
+        guardrails(MAX_BODY_BYTES, Some(Duration::from_secs(5)), Some(4)),
     );
 
     let holder = {
