@@ -6491,6 +6491,10 @@
               "type": "integer",
               "minimum": 1
             }
+          },
+          "sourceWorkflowId": {
+            "type": "string",
+            "description": "The workflow this run was materialised from, when it came from one."
           }
         },
         "required": [
@@ -7739,6 +7743,10 @@
               "type": "integer",
               "minimum": 1
             }
+          },
+          "sourceWorkflowId": {
+            "type": "string",
+            "description": "The workflow this run was materialised from, when it came from one."
           }
         },
         "required": [
@@ -7807,6 +7815,10 @@
               "type": "integer",
               "minimum": 1
             }
+          },
+          "sourceWorkflowId": {
+            "type": "string",
+            "description": "The workflow this run was materialised from, when it came from one."
           }
         },
         "required": []

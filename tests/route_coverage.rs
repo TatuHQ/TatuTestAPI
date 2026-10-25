@@ -54,13 +54,21 @@ async fn every_documented_operation_was_served_successfully() {
     assert_eq!(status, StatusCode::OK);
     let documented = documented_operations(&document);
 
+    // `POST /workflows` is a deliberately retired route: it answers
+    // `400 invalid_request` and directs the caller to the project-scoped
+    // creation route. It cannot have a successful answer, so it is documented
+    // in the contract but excluded from the success requirement.
+    let is_retired = |label: &str| label == "post /workflows";
+
     let unreached: Vec<&String> = documented
         .iter()
-        .filter(|label| !observed.contains_key(*label))
+        .filter(|label| !is_retired(label) && !observed.contains_key(*label))
         .collect();
     let failed: Vec<&String> = documented
         .iter()
-        .filter(|label| observed.get(*label).is_some_and(|seen| seen.successes == 0))
+        .filter(|label| {
+            !is_retired(label) && observed.get(*label).is_some_and(|seen| seen.successes == 0)
+        })
         .collect();
 
     eprintln!(

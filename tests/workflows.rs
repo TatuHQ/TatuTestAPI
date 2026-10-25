@@ -104,7 +104,7 @@ async fn workflows_support_the_full_crud_lifecycle() {
     assert_eq!(stored["name"], "smoke");
 
     // Update
-    let (_status, _updated) = send_json(
+    let (status, _updated) = send_json(
         &app,
         json_request(
             "PUT",
@@ -119,6 +119,50 @@ async fn workflows_support_the_full_crud_lifecycle() {
     let (status, stored) = send_json(&app, get(&format!("/workflows/{id}"))).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(stored["name"], "smoke-v2");
+
+    // Duplicate through the flat route, then delete the copy through it.
+    let (status, duplicate) = send_json(
+        &app,
+        json_request(
+            "POST",
+            &format!("/workflows/{id}/duplicate"),
+            &json!({"newId": "smoke-copy.json"}),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{duplicate}");
+    let copy_id = duplicate["id"].as_str().unwrap();
+    let (status, _) = send_json(&app, delete(&format!("/workflows/{copy_id}"))).await;
+    assert_eq!(status, StatusCode::OK);
+
+    // Materialise an empty workflow into a run from its project. The run
+    // route needs the project snapshot and the provenance stamp even when the
+    // plan has no steps.
+    let (status, empty) = send_json(
+        &app,
+        json_request(
+            "POST",
+            &format!("/projects/{home}/workflows"),
+            &json!({"name": "empty", "steps": []}),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{empty}");
+    let empty_id = empty["id"].as_str().unwrap();
+    let (status, run) = send_json(
+        &app,
+        json_request(
+            "POST",
+            &format!("/projects/{home}/workflows/{empty_id}/run"),
+            &json!({"name": "empty-run"}),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{run}");
+
+    // Delete the empty workflow through the flat route.
+    let (status, _) = send_json(&app, delete(&format!("/workflows/{empty_id}"))).await;
+    assert_eq!(status, StatusCode::OK);
 
     // Delete through the project-scoped route
     let (status, _) = send_json(&app, delete(&format!("/projects/{home}/workflows/{id}"))).await;

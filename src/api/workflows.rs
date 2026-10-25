@@ -113,11 +113,18 @@ async fn run_from_workflow<R: Repository + 'static>(
             "sourceWorkflowId": workflow_id
         });
 
-        // Add projects if specified.
+        // Add projects if specified; otherwise stamp the workflow's home with
+        // its stored name, because a run's project snapshots require one.
         if let Some(projects) = body.get("projects") {
             run_body["projects"] = projects.clone();
         } else {
-            run_body["projects"] = json!([{"projectId": id}]);
+            let project = service.document(Resource::Projects, &id)?;
+            let project_name = project.get("name").and_then(Value::as_str).unwrap_or(&id);
+            run_body["projects"] = json!([{
+                "projectId": id,
+                "name": project_name,
+                "testSuites": []
+            }]);
         }
 
         let created = service.create_in(Resource::Runs, &Parent::Project(id), &run_body)?;

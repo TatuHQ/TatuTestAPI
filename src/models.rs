@@ -302,6 +302,9 @@ pub struct TestRun {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Per-case pinned revisions (`testCaseId` → version) captured when the case joined or its result was recorded.
     pub case_versions: Option<HashMap<String, u64>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// The workflow this run was materialised from, when it came from one.
+    pub source_workflow_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
