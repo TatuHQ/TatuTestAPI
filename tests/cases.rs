@@ -1395,6 +1395,12 @@ async fn parent_scoped_history_reads_the_copy_the_bare_route_refuses() {
     let (status, body) = send_json(&app, get("/test_cases/TC-001/history")).await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
 
+    // The history snapshot carries the pre-update document's timestamp, so
+    // read it before the edit rather than assuming it equals the edit time.
+    let (status, before) = send_json(&app, get(&format!("/projects/{project}"))).await;
+    assert_eq!(status, StatusCode::OK, "{before}");
+    let snapshot_stamp = assert_iso8601(&before["testCases"][0]["lastModified"]).to_owned();
+
     // One qualifying edit on the project's copy records version 1 there and
     // only there; the suite's copy has seen nothing.
     let (status, body) = send_json(
@@ -1407,7 +1413,6 @@ async fn parent_scoped_history_reads_the_copy_the_bare_route_refuses() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    let first_stamp = assert_iso8601(&body["document"]["lastModified"]).to_owned();
 
     let (status, history) = send_json(
         &app,
@@ -1417,7 +1422,7 @@ async fn parent_scoped_history_reads_the_copy_the_bare_route_refuses() {
     assert_eq!(status, StatusCode::OK, "{history}");
     assert_eq!(
         history,
-        json!([{"version": 1, "lastModified": first_stamp, "changedFields": ["title"]}])
+        json!([{"version": 1, "lastModified": snapshot_stamp, "changedFields": ["title"]}])
     );
     let (status, suite_history) = send_json(
         &app,
