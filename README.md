@@ -23,32 +23,15 @@ in [openapi.json](openapi.json).
 This README is the quick-start: clone, build, run, authenticate, call. Everything else
 lives in the documentation tree linked at the bottom.
 
-## Renamed from TucanoTest (1.1.0)
+## Deployment identifiers (1.1.0)
 
-The project is now **TatuTest**, published by [TatuHQ](https://github.com/TatuHQ). Stored
-documents are unchanged — the JSON layout, field names and the HTTP contract are the same —
-but deployment names are not. This release is deliberately a clean break, with no `TUCANO_*`
-fallback.
-
-| Before | After |
-| --- | --- |
-| `TucanoTestAPI` / `tucano-test` | `TatuTestAPI` / `tatu-test` |
-| `ghcr.io/tucanotechnology/tucanotestapi` | `ghcr.io/tatuhq/tatutestapi` |
-| `tucano-test-api:local`, `tucano-test-gui:local` | `tatu-test-api:local`, `tatu-test-gui:local` |
-| Every `TUCANO_*` environment variable | The same name with `TATU_*` (for example `TATU_DATA_DIR`, `TATU_JWT_SECRET`, `TATU_BOOTSTRAP_PASSWORD`, `TATU_MAX_BODY_BYTES`) |
-| Sibling `../TucanoTestGUI` checkout | Sibling `../TatuTestGUI` checkout |
-
-To carry an existing deployment over:
-
-1. Stop the old stack and keep a copy of the data directory.
-2. Point `TATU_DATA_DIR` at the existing data, or copy it into the new volume. The documents
-   need no conversion.
-3. Rename every `TUCANO_*` variable in the Compose file, `.env` or service definition to
-   `TATU_*`, including the required `TATU_JWT_SECRET` and `TATU_BOOTSTRAP_PASSWORD`.
-4. Rebuild or pull `ghcr.io/tatuhq/tatutestapi`, and update the GUI's `TATU_API_URL`.
-
-The seed and demo scripts use the same rename (`TATU_SEED_VIEWER_PASSWORD`,
-`TATU_SEED_AUTH_CMD`, and so on).
+1.1.0 is a clean-break deployment release: use the `TATU_` prefix for every environment variable,
+the `tatu-test` binary, the `tatu-test-api:local` / `tatu-test-gui:local` Compose images, and the
+sibling `../TatuTestGUI` checkout. The stored documents and the HTTP contract are unchanged, so an
+existing data directory needs no conversion. Point `TATU_DATA_DIR` at it, update every variable to
+`TATU_*` (including the required `TATU_JWT_SECRET` and `TATU_BOOTSTRAP_PASSWORD`), and rebuild or
+pull `ghcr.io/tatuhq/tatutestapi`. The seed and demo scripts use the same prefix
+(`TATU_SEED_VIEWER_PASSWORD`, `TATU_SEED_AUTH_CMD`, and so on).
 
 ## Prerequisites
 
