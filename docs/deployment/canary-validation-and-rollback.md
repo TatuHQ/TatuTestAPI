@@ -1,7 +1,7 @@
 # Shadow & Canary Validation and Rollback Runbook
 
-Issue: [#96](https://github.com/TucanoTechnology/TucanoTestAPI/issues/96), split from
-[#16](https://github.com/TucanoTechnology/TucanoTestAPI/issues/16). Phase 3 of the Rust migration
+Issue: [#96](https://github.com/TatuHQ/TatuTestAPI/issues/96), split from
+[#16](https://github.com/TatuHQ/TatuTestAPI/issues/16). Phase 3 of the Rust migration
 ([`docs/architecture/rust-service-core.md`](../architecture/rust-service-core.md)) calls for the
 service to be "shadow or canary validated with rollback to the current implementation". This runbook
 is that procedure, plus the scratch-CRUD smoke check that gates a promotion.
@@ -11,12 +11,12 @@ It is an operations document: it adds no route, no field and no stored-document 
 ## The deployment model this runbook assumes
 
 - **One image.** The release workflow (`.github/workflows/release.yml`) publishes
-  `ghcr.io/tucanotechnology/tucanotestapi` for every push to `main` and every `v*.*.*` tag, tagged
+  `ghcr.io/tatuhq/tatutestapi` for every push to `main` and every `v*.*.*` tag, tagged
   with the immutable build tag `build-<run number>` and, for SemVer releases, `vMAJOR.MINOR.PATCH`
   (see *Release numbering* in `AGENTS.md`). Validation uses an existing immutable tag — a tag is
   never moved or reused.
 - **One image, and — on the local build — one mutable name.** The published tag above is a release
-  artifact. The shipped `docker-compose.yml` instead composes `image: tucano-test-api:local` with
+  artifact. The shipped `docker-compose.yml` instead composes `image: tatu-test-api:local` with
   `build: .`, so that local name is a build output: **every `docker compose up --build api` retags
   it**, and the image the previous container was running loses its only name — with the containerd
   image store the engine then collects it. On that path `PREVIOUS` is the image **id** the running
@@ -24,24 +24,24 @@ It is an operations document: it adds no route, no field and no stored-document 
   finding F-178-2 in
   [`docs/security/audit-s3-container-and-deployment.md`](../security/audit-s3-container-and-deployment.md).
 - **A shared, writable data volume.** Every replica mounts the same persistent POSIX volume at
-  `TUCANO_DATA_DIR` (the container default is `/data`); `docker-compose.yml` maps `./data:/data` on
+  `TATU_DATA_DIR` (the container default is `/data`); `docker-compose.yml` maps `./data:/data` on
   port `3100:3000`. A local Docker volume serves a single node; multi-node deployments must supply
   shared storage with working advisory locks (`README.md`, *Application container*).
 - **Stateless replicas.** The process keeps no sessions or in-memory records, so a second replica can
   start beside the first without coordination. Mutations take an advisory lock file and write by
   atomic same-directory rename.
 - **Hardened container.** Read-only root filesystem, `--tmpfs /tmp`, `no-new-privileges`, all Linux
-  capabilities dropped, unprivileged user (uid 10001), `TUCANO_DATA_DIR=/data`, `PORT=3000`.
+  capabilities dropped, unprivileged user (uid 10001), `TATU_DATA_DIR=/data`, `PORT=3000`.
 
 ## Why canary, not shadow
 
 A *shadow* runs the candidate beside production and discards its writes. This service cannot do
-that: reads and writes both act on `TUCANO_DATA_DIR`, and the writes are the real ones — there is no
+that: reads and writes both act on `TATU_DATA_DIR`, and the writes are the real ones — there is no
 write-side branch to redirect. Pointing a shadow at the production volume would make its writes
 visible.
 
 A *canary* is therefore the mechanism: a second replica of the candidate image, mounted on the same
-`TUCANO_DATA_DIR`, published on a port the stable replica does not use, and **not yet in the load
+`TATU_DATA_DIR`, published on a port the stable replica does not use, and **not yet in the load
 balancer**. Because replicas are stateless and mutations are lock-guarded, the canary can safely
 serve real reads and writes. Step 1 only ever gives it the scratch CRUD of the smoke check, never
 live traffic, until Step 3.
@@ -49,36 +49,36 @@ live traffic, until Step 3.
 ## Step 0 — record what is currently serving, and snapshot if the release changes stored shape or layout
 
 ```sh
-IMAGE="ghcr.io/tucanotechnology/tucanotestapi"
+IMAGE="ghcr.io/tatuhq/tatutestapi"
 PREVIOUS="$IMAGE:build-4700"        # or the current vMAJOR.MINOR.PATCH tag
 CANDIDATE="$IMAGE:build-4711"       # the build under test
 ```
 
 Record `PREVIOUS` before touching anything; it is the rollback target.
 
-For the shipped Compose local build (`image: tucano-test-api:local` with `build: .`) the local name
+For the shipped Compose local build (`image: tatu-test-api:local` with `build: .`) the local name
 is a build output, not a release tag: the `--build` that produces the candidate retags it, so the
 previous image id must be recorded **and pinned under a rollback-only tag before that build** — the
-candidate is then `tucano-test-api:local` itself, and `$CANDIDATE` names it. Read the id from the
+candidate is then `tatu-test-api:local` itself, and `$CANDIDATE` names it. Read the id from the
 **running container**, never from the tag — the two can already have diverged:
 
 ```sh
 PREVIOUS_ID="$(docker inspect --format '{{.Image}}' "$(docker compose ps -q api)")"
-docker tag "$PREVIOUS_ID" tucano-test-api:rollback
+docker tag "$PREVIOUS_ID" tatu-test-api:rollback
 ```
 
 `PREVIOUS_ID` is the rollback target on this path. The `docker tag` is what keeps it: the id alone
-does not hold the image — once the rebuild retags `tucano-test-api:local`, an image with no tag left
+does not hold the image — once the rebuild retags `tatu-test-api:local`, an image with no tag left
 can be collected by the engine, and it is then unrecoverable from the local cache.
 
 If the candidate changes the shape, strictness or validation of any stored document — or **where**
-documents live, as the storage layout v3 change ([#215](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215))
+documents live, as the storage layout v3 change ([#215](https://github.com/TatuHQ/TatuTestAPI/issues/215))
 did — snapshot the volume first. Documents are plain JSON and inspectable on the host, so a
 filesystem snapshot or an archive of the data directory is enough:
 
 ```sh
-DATA_DIR=/srv/tucano/data           # the directory the stable replica mounts at /data
-tar -C "$DATA_DIR" -czf "tucano-data-$(date +%Y%m%d-%H%M%S).tgz" .
+DATA_DIR=/srv/tatu/data           # the directory the stable replica mounts at /data
+tar -C "$DATA_DIR" -czf "tatu-data-$(date +%Y%m%d-%H%M%S).tgz" .
 ```
 
 See *What rollback guarantees about the shared volume* below for when this is mandatory, and
@@ -90,10 +90,10 @@ Run the candidate image against the **same** data directory the stable replica u
 stable replica does not publish:
 
 ```sh
-docker run --detach --name tucano-api-canary \
+docker run --detach --name tatu-api-canary \
   --read-only --tmpfs /tmp \
   --security-opt no-new-privileges:true --cap-drop=ALL \
-  --env TUCANO_DATA_DIR=/data --env PORT=3000 \
+  --env TATU_DATA_DIR=/data --env PORT=3000 \
   --volume "$DATA_DIR":/data \
   --publish 3101:3000 \
   "$CANDIDATE"
@@ -103,11 +103,11 @@ If the data lives in a named Docker volume rather than a host directory, pass th
 the stable service uses (`--volume <volume-name>:/data`). Wait for the container to become healthy — and read its own report of what it is:
 
 ```sh
-docker logs --follow --tail 20 tucano-api-canary
-# tucano.boot version=1.0.1 build=build-4711 toolchain="rustc 1.98.0 ..." data_dir=/data auth_required=true
+docker logs --follow --tail 20 tatu-api-canary
+# tatu.boot version=1.0.1 build=build-4711 toolchain="rustc 1.98.0 ..." data_dir=/data auth_required=true
 ```
 
-Since [#418](https://github.com/TucanoTechnology/TucanoTestAPI/issues/418) the service opens by
+Since [#418](https://github.com/TatuHQ/TatuTestAPI/issues/418) the service opens by
 identifying itself, from data compiled into the binary: `build=` is the CI run number the image was
 built with, and it **must** name the same build as `$CANDIDATE`'s tag — a container whose boot line
 disagrees with the tag it was pulled under means the registry or the node cache is serving a
@@ -116,7 +116,7 @@ CI the build reads `local`, which is exactly as informative for the docker hub o
 `auth_required` and `data_dir` confirm the runtime posture the canary is actually running with.
 
 A candidate that expects a newer storage layout may **refuse to start** against an older volume.
-Since layout v3 ([#215](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215)) the service
+Since layout v3 ([#215](https://github.com/TatuHQ/TatuTestAPI/issues/215)) the service
 will not start when `test_runs/`, `milestones/` or `configurations/` hold `*.json` documents at the
 root of the data directory; it logs `legacy flat storage layout detected: …` and exits rather than
 serve a partial view of the data. That is a volume to convert, not a canary to debug: stop here and
@@ -178,12 +178,12 @@ recorded:
   the production port (`--publish 3000:3000` or the host mapping in use).
 - **Compose:** for a registry tag, pin the new image tag in the deployment manifest and recreate the
   `api` service. For the shipped local build the promotion *is* the build —
-  `docker compose up --detach --build api` retags `tucano-test-api:local` to the candidate, which is
+  `docker compose up --detach --build api` retags `tatu-test-api:local` to the candidate, which is
   why Step 0 pinned the previous image id before it. Either way, remove the standalone canary
   container once the promoted replica is serving:
 
   ```sh
-  docker stop tucano-api-canary && docker rm tucano-api-canary
+  docker stop tatu-api-canary && docker rm tatu-api-canary
   ```
 
 ## Rollback
@@ -196,17 +196,17 @@ rollback-only tag (Step 0) precisely so it is still there to retag.
 If the candidate was **never promoted** (it is still the standalone canary), remove it:
 
 ```sh
-docker stop tucano-api-canary && docker rm tucano-api-canary
+docker stop tatu-api-canary && docker rm tatu-api-canary
 ```
 
 If it **was promoted**, redeploy the recorded previous tag:
 
 ```sh
-docker stop tucano-api && docker rm tucano-api
-docker run --detach --name tucano-api \
+docker stop tatu-api && docker rm tatu-api
+docker run --detach --name tatu-api \
   --read-only --tmpfs /tmp \
   --security-opt no-new-privileges:true --cap-drop=ALL \
-  --env TUCANO_DATA_DIR=/data --env PORT=3000 \
+  --env TATU_DATA_DIR=/data --env PORT=3000 \
   --volume "$DATA_DIR":/data \
   --publish 3000:3000 \
   "$PREVIOUS"
@@ -227,12 +227,12 @@ docker compose up --detach --no-deps --force-recreate api
 
 **Shipped local build.** Put the recorded image id back under the mutable name the Compose file uses,
 then recreate the service **without building** — `--no-build` is load-bearing, because a `--build`
-here would retag `tucano-test-api:local` to a freshly built candidate and roll the candidate back in.
+here would retag `tatu-test-api:local` to a freshly built candidate and roll the candidate back in.
 The `docker tag` cannot succeed if Step 0 never ran, and that is the signal that the previous image
 was collected and is not recoverable from the local cache:
 
 ```sh
-docker tag tucano-test-api:rollback tucano-test-api:local
+docker tag tatu-test-api:rollback tatu-test-api:local
 docker compose up --detach --no-deps --no-build --force-recreate api
 docker inspect --format '{{.Image}}' "$(docker compose ps -q api)"   # must equal "$PREVIOUS_ID"
 ```
@@ -242,7 +242,7 @@ declaring the rollback complete.
 
 ## What rollback guarantees about the shared volume
 
-Both images read and write the same `TUCANO_DATA_DIR`, so a rollback is only safe if the previous
+Both images read and write the same `TATU_DATA_DIR`, so a rollback is only safe if the previous
 build can still read what the candidate wrote. The authority is
 [`docs/contracts/api-compatibility.md`](../contracts/api-compatibility.md); the relevant behaviour,
 verified against the current source, is:
@@ -282,7 +282,7 @@ it: no field moved and no model got stricter. No `formatVersion` bump is involve
 the marker answers "is this document from the future", not "is this document where I expect it".
 
 Rolling a build back across storage layout v3
-([#215](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215)) therefore loses exactly what
+([#215](https://github.com/TatuHQ/TatuTestAPI/issues/215)) therefore loses exactly what
 the layout moved. The older build reads no root collections and finds nothing under the paths it
 knows: it answers `404` for runs, milestones and configurations, and `GET /milestones/{id}/progress`
 reports zeros because it skips the runs it cannot find. Projects, suites and cases are unaffected —
@@ -309,7 +309,7 @@ the operator recipe for converting one are recorded in
 | --- | --- |
 | [`scripts/smoke.sh`](../../scripts/smoke.sh) | Scratch-CRUD smoke check; exits non-zero on the first deviation. |
 | [`docker-compose.yml`](../../docker-compose.yml) | Reference for the hardened container settings and the volume mount. |
-| [`Dockerfile`](../../Dockerfile) | Image build, `TUCANO_DATA_DIR=/data`, `PORT=3000`, unprivileged uid 10001. |
+| [`Dockerfile`](../../Dockerfile) | Image build, `TATU_DATA_DIR=/data`, `PORT=3000`, unprivileged uid 10001. |
 | [`docs/contracts/api-compatibility.md`](../contracts/api-compatibility.md) | Compatibility rules and the versioning plans that govern rollback. |
 | [`docs/architecture/adr-storage-layout-v3.md`](../architecture/adr-storage-layout-v3.md) | Where runs, milestones and configurations live, the legacy-layout startup refusal, and the v3 rollback consequence. |
 | [`docs/deployment/deployment-guide.md`](deployment-guide.md) | The operator recipe for converting a legacy volume to layout v3. |

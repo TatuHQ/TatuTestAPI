@@ -154,6 +154,7 @@ mod tests {
             tags: None,
             configurations: None,
             case_versions: None,
+            source_workflow_id: None,
         }
     }
 

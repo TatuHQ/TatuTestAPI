@@ -1,8 +1,8 @@
 # Configuration Model and Secrets Decision (Issue #187)
 
-Issue: [#187](https://github.com/TucanoTechnology/TucanoTestAPI/issues/187) — decide the
+Issue: [#187](https://github.com/TatuHQ/TatuTestAPI/issues/187) — decide the
 configuration model and how secrets are stored, before anything is implemented. Child of
-[#168](https://github.com/TucanoTechnology/TucanoTestAPI/issues/168) (*Add a unified configuration
+[#168](https://github.com/TatuHQ/TatuTestAPI/issues/168) (*Add a unified configuration
 file with encrypted secrets*). This document is the decision of record; implementation is tracked by
 the sibling children of #168, listed under [Tracking](#tracking).
 
@@ -18,13 +18,13 @@ That request collides with two things already fixed in this repository, and the 
 substance of this decision:
 
 1. **`AgentRules/security/secret-protection.md`** states the rule as "Use environment variables or
-   `.env` files for secrets". `AgentRules/` is synced from TucanoAgentRules and must not be edited
+   `.env` files for secrets". `AgentRules/` is synced from TatuAgentRules and must not be edited
    here, so a decision that moved secrets into a config file would need an upstream rule change to
    be honest about it.
 2. **The container runs with a read-only root filesystem** (`read_only: true` in
    [`docker-compose.yml`](../../docker-compose.yml), `--read-only` in the promotion runbook, and the
    hardening table in [`docs/deployment/deployment-guide.md`](../deployment/deployment-guide.md)).
-   Only `TUCANO_DATA_DIR` and the `/tmp` tmpfs are writable. A configuration file that a running
+   Only `TATU_DATA_DIR` and the `/tmp` tmpfs are writable. A configuration file that a running
    process must *write* to cannot live on the immutable root filesystem, and the reason the root
    filesystem is immutable is precisely to stop a compromised process from persisting anything.
 
@@ -37,12 +37,12 @@ Configuration is environment variables only, read in exactly two places:
 
 | Setting | Read by | Default |
 | --- | --- | --- |
-| `TUCANO_DATA_DIR` | [`src/main.rs`](../../src/main.rs) | `data` |
+| `TATU_DATA_DIR` | [`src/main.rs`](../../src/main.rs) | `data` |
 | `PORT` | [`src/main.rs`](../../src/main.rs) | `3000` |
-| `TUCANO_AUTH_REQUIRED` | [`src/auth/config.rs`](../../src/auth/config.rs) | `false` |
-| `TUCANO_JWT_SECRET` / `TUCANO_JWT_SECRET_FILE` | `src/auth/config.rs` | none; required when auth is on |
-| `TUCANO_ACCESS_TOKEN_TTL` / `TUCANO_REFRESH_TOKEN_TTL` | `src/auth/config.rs` | `15m` / `14d` |
-| `TUCANO_BOOTSTRAP_USERNAME` / `TUCANO_BOOTSTRAP_PASSWORD` | `src/auth/config.rs` (used by [`src/auth/bootstrap.rs`](../../src/auth/bootstrap.rs)) | none |
+| `TATU_AUTH_REQUIRED` | [`src/auth/config.rs`](../../src/auth/config.rs) | `false` |
+| `TATU_JWT_SECRET` / `TATU_JWT_SECRET_FILE` | `src/auth/config.rs` | none; required when auth is on |
+| `TATU_ACCESS_TOKEN_TTL` / `TATU_REFRESH_TOKEN_TTL` | `src/auth/config.rs` | `15m` / `14d` |
+| `TATU_BOOTSTRAP_USERNAME` / `TATU_BOOTSTRAP_PASSWORD` | `src/auth/config.rs` (used by [`src/auth/bootstrap.rs`](../../src/auth/bootstrap.rs)) | none |
 
 Three properties of that implementation matter to this decision, because they are what the file
 option would have to preserve or knowingly give up:
@@ -57,7 +57,7 @@ option would have to preserve or knowingly give up:
 - **Configuration errors are startup errors.** The process refuses to boot rather than coming up and
   failing strangely later.
 - **Secrets are already covered by four distinct behaviours**: `*_FILE` variants
-  (`TUCANO_JWT_SECRET_FILE`), a length floor (`MIN_SECRET_BYTES = 32`), an explicit conflict refusal
+  (`TATU_JWT_SECRET_FILE`), a length floor (`MIN_SECRET_BYTES = 32`), an explicit conflict refusal
   when both sources are set, and an existing security invariant that credentials are never stored or
   logged in the clear.
 
@@ -71,10 +71,10 @@ unified file, because they do not have the same threat profile:
 
 | Kind | Examples | Rotation | Who can read it | Threat if disclosed |
 | --- | --- | --- | --- | --- |
-| **Process/environment settings** | `TUCANO_DATA_DIR`, `PORT`, token lifetimes | restart | operators | little |
+| **Process/environment settings** | `TATU_DATA_DIR`, `PORT`, token lifetimes | restart | operators | little |
 | **Service boot secrets** | the JWT signing secret | restart | operators | session forgery |
 | **External integration credentials** | AWS keys for defect links or test-result imports | minutes to days, often automatic | operators *and* credential issuers | third-party account takeover |
-| **Read-once bootstrap credentials** | `TUCANO_BOOTSTRAP_PASSWORD` | used once at first boot | operators | privilege escalation at first boot |
+| **Read-once bootstrap credentials** | `TATU_BOOTSTRAP_PASSWORD` | used once at first boot | operators | privilege escalation at first boot |
 
 The fourth row is already handled the right way and is the model to generalise: the bootstrap
 password is *transient*. It is consumed once, stored only as an Argon2id PHC hash, and never read
@@ -94,14 +94,14 @@ logs and images, keep `read_only: true`, keep `AgentRules/security/secret-protec
 | | **A. Environment variables as-is** | **B. Config file only** | **C. Environment first, file as an optional second source** |
 | --- | --- | --- | --- |
 | Secrets rule (`secret-protection.md`) | Satisfied as written | **Violated** unless the rule changes upstream | Satisfied: environment stays a first-class, documented source |
-| `read_only: true` | Fine: nothing is written | Fine *if* the file is mounted read-only and never rewritten, or lives under `TUCANO_DATA_DIR` with `0600` | Fine: same, and the file is optional |
+| `read_only: true` | Fine: nothing is written | Fine *if* the file is mounted read-only and never rewritten, or lives under `TATU_DATA_DIR` with `0600` | Fine: same, and the file is optional |
 | "One file, not spread across variables" | **Not achieved** | Achieved | Largely achieved, with a small env allow-list kept for the reasons below |
 | Existing deployment | Unchanged | Breaks on upgrade unless a migration step is run | Unchanged: no file means today's behaviour exactly |
 | Startup validation | Already pure and fully unit-tested | Requires a loader with the same purity | Same, plus precedence that must be tested per key |
 | Image/secret hygiene | Secrets visible in `docker inspect` and Compose | Out of the image, out of `inspect` | Same, and the secret can also stay out of the Compose file |
 | Rotation | Recreate each replica | Rewrite the file on the volume and restart | Rewrite the volume file and restart; per-replica env still available for overrides |
 | Blast radius if the file leaks | — | *Every* setting and *every* secret, in one artifact | One value per key; environment-supplied values are unaffected |
-| Compatibility with `PORT`/`TUCANO_DATA_DIR` | Fine | **Wrong tool**: `PORT` and `TUCANO_DATA_DIR` must be settable by the orchestrator before the file can be located | Both supported, which is the point |
+| Compatibility with `PORT`/`TATU_DATA_DIR` | Fine | **Wrong tool**: `PORT` and `TATU_DATA_DIR` must be settable by the orchestrator before the file can be located | Both supported, which is the point |
 
 ### Why not A alone
 
@@ -114,7 +114,7 @@ process environment of the container.
 
 B alone is the option the epic literally describes, and it fails four times over:
 
-1. **It cannot locate itself.** `TUCANO_DATA_DIR` decides where the data volume is and `PORT` decides
+1. **It cannot locate itself.** `TATU_DATA_DIR` decides where the data volume is and `PORT` decides
    where the process listens. Both must be settable *before* the file can be read, so a file-only
    model still needs an environment allow-list — and once that allow-list exists, "file only" is
    already "both".
@@ -122,7 +122,7 @@ B alone is the option the epic literally describes, and it fails four times over
    existing env-only Compose deployment keeps working". A file-only model changes behaviour on
    upgrade unless a migration step is mandatory, which contradicts the requirement.
 3. **It conflicts with the secret-protection rule.** `AgentRules/security/secret-protection.md`
-   names environment variables and `.env` files. `AgentRules/` is synced from TucanoAgentRules and
+   names environment variables and `.env` files. `AgentRules/` is synced from TatuAgentRules and
    must not be edited in this repository, so B is only legitimate *after* that rule is changed
    upstream. #187 is not the place to fork the rule.
 4. **It concentrates blast radius.** One artifact holding every setting and every secret is a single
@@ -145,7 +145,7 @@ single optional configuration file is added as a second source that is read once
 | Aspect | Decision |
 | --- | --- |
 | Configuration model | **Environment first, file second, defaults last**, with a documented precedence. The environment is applied *over* the file, per key, not per file: a file supplies whole settings, and any setting the environment also provides wins. |
-| Environment allow-list | A small set of settings must remain environment-only because they are needed *before* the file can be read, and because the orchestrator owns them: `TUCANO_DATA_DIR`, `PORT`, and the path of the configuration file itself. Nothing else is env-only. |
+| Environment allow-list | A small set of settings must remain environment-only because they are needed *before* the file can be read, and because the orchestrator owns them: `TATU_DATA_DIR`, `PORT`, and the path of the configuration file itself. Nothing else is env-only. |
 | Config file location | Set explicitly by an environment variable. Do **not** search a default path implicitly: an implicit search means a stray file in a writable directory silently changes a production deployment. |
 | Config file writability | **Read-only for the process.** The file is never created or rewritten by the running service, so `read_only: true` is preserved. The service either reads a mounted file or refuses to start. |
 | Secrets in the file | **Permitted, and no secret may exist *only* in the file.** For every secret the environment can also supply, the environment wins, which keeps `AgentRules/security/secret-protection.md` satisfiable without editing it. |
@@ -171,7 +171,7 @@ and encryption of the configuration file is recommended but optional for the fir
 
 | Question | Decision |
 | --- | --- |
-| **Where does the key live?** | Outside the artifact it protects, and outside the image. The supported form is a **file containing the key, mounted read-only** into the container, named by an environment variable — the same shape as `TUCANO_JWT_SECRET_FILE`, which the deployment guide already documents and the container's read-only root filesystem already accommodates. A Docker/Kubernetes secret mount is the reference deployment. |
+| **Where does the key live?** | Outside the artifact it protects, and outside the image. The supported form is a **file containing the key, mounted read-only** into the container, named by an environment variable — the same shape as `TATU_JWT_SECRET_FILE`, which the deployment guide already documents and the container's read-only root filesystem already accommodates. A Docker/Kubernetes secret mount is the reference deployment. |
 | **How is it provided?** | By the operator, at deployment time, through the orchestrator's secret mechanism. There is **no key derivation from the configuration file's own contents** and **no key stored beside the file**: a key that travels with the ciphertext protects nothing against the actor we are defending against. |
 | **What algorithm?** | Authenticated encryption only — AES-256-GCM or ChaCha20-Poly1305. Encryption without authentication would let a modified file decrypt to attacker-chosen values. The envelope must be **versioned and self-describing** (algorithm, nonce, and a key identifier) so the algorithm can change without a flag day. |
 | **What happens when the key is absent?** | Depends on whether the file claims to hold secrets, and it is a **startup error either way** — never a warning, never a silent fallback to plaintext. If the file is present, marked as containing secrets, and no key is available, the service **refuses to boot**. If the key is present but the file is not marked as encrypted, the key is unused, not an error. The service must never come up believing it read a secret it did not. |
@@ -187,8 +187,8 @@ and encryption of the configuration file is recommended but optional for the fir
   would foreclose nothing and commit us to a vendor.
 - **Automatic, periodic re-encryption** — deferred. Rotation is driven by the operator; a service
   that rewrites its own configuration fights the read-only root filesystem and the "the API is the
-  only actor below `TUCANO_DATA_DIR`" rule.
-- **Encryption at rest of everything under `TUCANO_DATA_DIR`** — out of scope and not implied by this
+  only actor below `TATU_DATA_DIR`" rule.
+- **Encryption at rest of everything under `TATU_DATA_DIR`** — out of scope and not implied by this
   ticket. It would change the storage concept, the inspectability guarantee that justifies the
   file-based design, and the backup/restore model.
 - **Making the configuration file required** — deferred. It becomes a candidate once every
@@ -219,9 +219,9 @@ The ticket asks that the decision be re-checked against the code by the ticket o
 2026-09-14, on `main`:
 
 - Configuration is env-only, read in `src/main.rs` and `src/auth/config.rs`; there is no file loader
-  and no `TUCANO_CONFIG_FILE` variable. **Deliberate: this ticket ships no code.** The siblings in
+  and no `TATU_CONFIG_FILE` variable. **Deliberate: this ticket ships no code.** The siblings in
   #168 are what make the decision true.
-- The env allow-list in the decision (`TUCANO_DATA_DIR`, `PORT`, plus the file path) matches exactly
+- The env allow-list in the decision (`TATU_DATA_DIR`, `PORT`, plus the file path) matches exactly
   what `src/main.rs` reads today.
 - The four secret behaviours the file loader must preserve — `*_FILE` variants, `MIN_SECRET_BYTES`,
   the both-sources conflict, and the never-store-in-the-clear invariant — are all present as
@@ -235,7 +235,7 @@ the "before" baseline. What has changed since:
 
 - **#188 landed the unencrypted half.** `src/config.rs` holds the versioned strict schema
   (`ConfigFile`, `deny_unknown_fields`, mandatory `version: 1`), the loader that reads only the file
-  `TUCANO_CONFIG_FILE` names, and the `resolve` precedence helper; `AuthConfig::from_env_and_file`
+  `TATU_CONFIG_FILE` names, and the `resolve` precedence helper; `AuthConfig::from_env_and_file`
   layers the file under the environment per key; `src/main.rs` loads it once before the listener
   binds; the template is [`docs/deployment/config.example.json`](../deployment/config.example.json),
   kept honest by a unit test that parses it. Two consequences of the decision were relaxed in
@@ -244,7 +244,7 @@ the "before" baseline. What has changed since:
   that the environment also reaches), and the shipped example documents `jwt_secret_file` rather
   than an inline secret, so the template itself carries no secret.
 - **#189 landed the encrypted half.** `src/config/secret.rs` holds the AEAD envelope
-  (AES-256-GCM, versioned and self-describing), the key ring loader (`TUCANO_CONFIG_KEY_FILE`),
+  (AES-256-GCM, versioned and self-describing), the key ring loader (`TATU_CONFIG_KEY_FILE`),
   and the `SecretValue` serde bridge that lets `jwt_secret` and `bootstrap_password` carry either
   a plain string or an encrypted object. `ConfigFile::resolve_secrets` decrypts in place at
   startup, before the auth resolver sees the file; every failure mode — missing key, wrong key,
@@ -261,19 +261,19 @@ the "before" baseline. What has changed since:
 
 | Ticket | What this decision fixes for it |
 | --- | --- |
-| [#188](https://github.com/TucanoTechnology/TucanoTestAPI/issues/188) — schema and loader | Optional file; explicit path from the environment; strict schema with unknown keys refused; loaded once at startup into an immutable value; whole-file read validated by the same pure resolver shape `AuthConfig::from_lookup` already uses. |
-| [#189](https://github.com/TucanoTechnology/TucanoTestAPI/issues/189) — encrypted secrets at rest | AEAD envelope with a key identifier; key from a read-only mounted file named by an environment variable; fail closed when a secret-bearing file has no usable key; no key stored beside the file; no plaintext fallback. |
-| [#190](https://github.com/TucanoTechnology/TucanoTestAPI/issues/190) — precedence and validation | Environment > file > default, **per key**; the three-item env allow-list; per-key precedence tests plus a test per validation refusal; a test that no secret value appears in a startup error or a log line. |
-| [#191](https://github.com/TucanoTechnology/TucanoTestAPI/issues/191) — reference and migration | The precedence table above verbatim, the rotation procedure, and an env-only → file migration path that requires no change to an existing deployment. |
+| [#188](https://github.com/TatuHQ/TatuTestAPI/issues/188) — schema and loader | Optional file; explicit path from the environment; strict schema with unknown keys refused; loaded once at startup into an immutable value; whole-file read validated by the same pure resolver shape `AuthConfig::from_lookup` already uses. |
+| [#189](https://github.com/TatuHQ/TatuTestAPI/issues/189) — encrypted secrets at rest | AEAD envelope with a key identifier; key from a read-only mounted file named by an environment variable; fail closed when a secret-bearing file has no usable key; no key stored beside the file; no plaintext fallback. |
+| [#190](https://github.com/TatuHQ/TatuTestAPI/issues/190) — precedence and validation | Environment > file > default, **per key**; the three-item env allow-list; per-key precedence tests plus a test per validation refusal; a test that no secret value appears in a startup error or a log line. |
+| [#191](https://github.com/TatuHQ/TatuTestAPI/issues/191) — reference and migration | The precedence table above verbatim, the rotation procedure, and an env-only → file migration path that requires no change to an existing deployment. |
 
 ## Tracking
 
-- Parent epic: [#168](https://github.com/TucanoTechnology/TucanoTestAPI/issues/168).
-- This decision: [#187](https://github.com/TucanoTechnology/TucanoTestAPI/issues/187).
-- Implementation children: [#188](https://github.com/TucanoTechnology/TucanoTestAPI/issues/188),
-  [#189](https://github.com/TucanoTechnology/TucanoTestAPI/issues/189),
-  [#190](https://github.com/TucanoTechnology/TucanoTestAPI/issues/190),
-  [#191](https://github.com/TucanoTechnology/TucanoTestAPI/issues/191).
+- Parent epic: [#168](https://github.com/TatuHQ/TatuTestAPI/issues/168).
+- This decision: [#187](https://github.com/TatuHQ/TatuTestAPI/issues/187).
+- Implementation children: [#188](https://github.com/TatuHQ/TatuTestAPI/issues/188),
+  [#189](https://github.com/TatuHQ/TatuTestAPI/issues/189),
+  [#190](https://github.com/TatuHQ/TatuTestAPI/issues/190),
+  [#191](https://github.com/TatuHQ/TatuTestAPI/issues/191).
 
 ## Upstream follow-up (not part of this ticket)
 
@@ -282,7 +282,7 @@ and `.env` files. This decision keeps that rule satisfiable by keeping the envir
 but the rule is narrower than the configuration model the epic is building. Widening it — for
 example to "environment variables, a mounted secret file, or an encrypted configuration file with an
 externally supplied key" — is a change to
-[TucanoAgentRules](https://github.com/TucanoTechnology/TucanoAgentRules), which is the single source
+[TatuAgentRules](https://github.com/TatuHQ/TatuAgentRules), which is the single source
 of truth for `AgentRules/`. **Do not edit `AgentRules/` in this repository.** The change is listed
 here so it is not lost, and it is not a prerequisite for the sibling tickets: nothing in this
 decision depends on it.

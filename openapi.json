@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Tucano Test API",
+    "title": "TatuTest API",
     "version": "0.1.0",
     "description": "File-based test case management API. Data is stored as JSON files; no database is used. Authentication is bearer: `POST /auth/login` and `POST /auth/refresh` mint a token and every other operation names one, answering `missing_token`, `invalid_token` or `token_expired` with a `WWW-Authenticate` challenge otherwise. Authorization is per project: a grant carries the `viewer`, `editor` or `owner` role, strictly ascending, and an operation needs its own minimum in every project it reaches — reads need `viewer`, writes to a project's suites, cases, runs and configurations need `editor`, and writes to a project itself or to a milestone need `owner`. An account flagged as the system administrator passes every check without a grant and is the only caller that may create a project. A configuration belongs to the project that stores it, so its routes answer `403` like any other project resource: `viewer` reads one and `editor` writes one. Each route resolves the projects a request reaches: a suite or a case through the project that owns it, a run through the project that stores it and every project its own `projects` array names, a configuration through the project that stores it, and a milestone through the project that stores it and the suites and runs it references. A milestone that references no suite and no run is a legal planning milestone: it is governed by its project alone and reports zero progress. A listing that carries a project scope is filtered to the projects the caller can reach rather than refused, and a caller that reaches nothing receives an empty one; a project-scoped listing needs the role in the project it names instead of filtering per entry, and a global document route that finds two occurrences of the bare identifier it names answers `conflict` rather than picking one. Because the projects a request names are checked before the resource is loaded, `forbidden` can precede the `404` a missing resource would draw; a deployment that does not enforce authentication skips every check."
   },
@@ -6491,6 +6491,10 @@
               "type": "integer",
               "minimum": 1
             }
+          },
+          "sourceWorkflowId": {
+            "type": "string",
+            "description": "The workflow this run was materialised from, when it came from one."
           }
         },
         "required": [
@@ -7739,6 +7743,10 @@
               "type": "integer",
               "minimum": 1
             }
+          },
+          "sourceWorkflowId": {
+            "type": "string",
+            "description": "The workflow this run was materialised from, when it came from one."
           }
         },
         "required": [
@@ -7807,6 +7815,10 @@
               "type": "integer",
               "minimum": 1
             }
+          },
+          "sourceWorkflowId": {
+            "type": "string",
+            "description": "The workflow this run was materialised from, when it came from one."
           }
         },
         "required": []
@@ -8453,7 +8465,7 @@
         }
       },
       "BodyTooLarge": {
-        "description": "Every request is capped at `TUCANO_MAX_BODY_BYTES` (default 50 MiB) by the router, before the handler runs: the answer is plain text — `length limit exceeded` — never the error envelope. Because the router cap and the attachment cap are the same size, the `payload_too_large` envelope the API can still produce is unreachable for attachments, and this plain-text 413 is the only observable one.",
+        "description": "Every request is capped at `TATU_MAX_BODY_BYTES` (default 50 MiB) by the router, before the handler runs: the answer is plain text — `length limit exceeded` — never the error envelope. Because the router cap and the attachment cap are the same size, the `payload_too_large` envelope the API can still produce is unreachable for attachments, and this plain-text 413 is the only observable one.",
         "content": {
           "text/plain": {
             "schema": {
@@ -8483,7 +8495,7 @@
         }
       },
       "LockTimeout": {
-        "description": "`lock_timeout`: the advisory lock could not be acquired within the configured timeout (default 5 s, `TUCANO_LOCK_TIMEOUT_MS`). The server is busy processing another write. Retry after the delay indicated by the `Retry-After` header.",
+        "description": "`lock_timeout`: the advisory lock could not be acquired within the configured timeout (default 5 s, `TATU_LOCK_TIMEOUT_MS`). The server is busy processing another write. Retry after the delay indicated by the `Retry-After` header.",
         "content": {
           "application/json": {
             "schema": {
@@ -8501,7 +8513,7 @@
         }
       },
       "RequestTimeout": {
-        "description": "`request_timeout`: the request outlived `TUCANO_REQUEST_TIMEOUT_MS` (default 300000 ms; an explicit `0` disables the deadline) and the server stopped waiting for it. A write already handed to the storage layer finishes atomically regardless of the cutoff, so a `504` answers 'unknown', never 'half done'.",
+        "description": "`request_timeout`: the request outlived `TATU_REQUEST_TIMEOUT_MS` (default 300000 ms; an explicit `0` disables the deadline) and the server stopped waiting for it. A write already handed to the storage layer finishes atomically regardless of the cutoff, so a `504` answers 'unknown', never 'half done'.",
         "content": {
           "application/json": {
             "schema": {
@@ -8516,7 +8528,7 @@
         }
       },
       "Overloaded": {
-        "description": "`service_unavailable`: the request arrived while `TUCANO_MAX_CONCURRENCY` (default 128; an explicit `0` removes the cap) others were already in flight. The server refuses rather than queues, and the answer carries `Retry-After`.",
+        "description": "`service_unavailable`: the request arrived while `TATU_MAX_CONCURRENCY` (default 128; an explicit `0` removes the cap) others were already in flight. The server refuses rather than queues, and the answer carries `Retry-After`.",
         "content": {
           "application/json": {
             "schema": {
@@ -8657,7 +8669,7 @@
         }
       },
       "WWWAuthenticate": {
-        "description": "The RFC 7235 challenge a `401` carries: `Bearer realm=\"Tucano Test API\"`, with `error=\"invalid_token\"` when the token itself was rejected rather than absent. Quote it when reporting the failure.",
+        "description": "The RFC 7235 challenge a `401` carries: `Bearer realm=\"TatuTest API\"`, with `error=\"invalid_token\"` when the token itself was rejected rather than absent. Quote it when reporting the failure.",
         "schema": {
           "type": "string"
         }

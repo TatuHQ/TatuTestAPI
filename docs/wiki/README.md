@@ -1,10 +1,10 @@
-# Tucano Test — User Wiki
+# TatuTest — User Wiki
 
-The Tucano Test API is a file-based test case management service: it stores projects, suites,
+The TatuTest API is a file-based test case management service: it stores projects, suites,
 cases, runs, milestones, and configurations as folders and JSON documents on disk — no database —
 and exposes every operation through the HTTP contract in [`openapi.json`](../../openapi.json).
 
-This wiki is written for the people who **use** Tucano Test. It is not the developer reference: for
+This wiki is written for the people who **use** TatuTest. It is not the developer reference: for
 the storage design, the module layout, and the build commands, read the [repository
 README](../../README.md); for the engineering records, see [docs/](../).
 
@@ -12,7 +12,7 @@ README](../../README.md); for the engineering records, see [docs/](../).
 
 | I want to… | Start here |
 | --- | --- |
-| Install Tucano Test and create my first project | [Installation and first project](getting-started.md) |
+| Install TatuTest and create my first project | [Installation and first project](getting-started.md) |
 | Understand how projects, suites, and cases are organised | [Projects, suites, and cases](projects-suites-and-cases.md) |
 | Run my first authenticated API call | [API and authentication quickstart](api-and-authentication.md) |
 | Run it in production, back it up, or fix a problem | [Operations and troubleshooting](operations-and-troubleshooting.md) |
@@ -76,4 +76,4 @@ where this section and that record differ, the record is authoritative.
 
 If you find a page that contradicts `openapi.json`, the behaviour of the running service, or one of
 the engineering records above, that is a documentation defect — please
-[open an issue](https://github.com/TucanoTechnology/TucanoTestAPI/issues).
+[open an issue](https://github.com/TatuHQ/TatuTestAPI/issues).

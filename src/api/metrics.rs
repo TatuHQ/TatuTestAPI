@@ -56,12 +56,12 @@ impl HttpMetrics {
     /// backslash a Prometheus parser would read as syntax.
     pub fn render(&self) -> String {
         let mut rendered = String::from(
-            "# HELP tucano_http_requests_total Requests served, by method, resource and status class.\n\
-             # TYPE tucano_http_requests_total counter\n",
+            "# HELP tatu_http_requests_total Requests served, by method, resource and status class.\n\
+             # TYPE tatu_http_requests_total counter\n",
         );
         for ((method, resource, class), count) in self.counts().iter() {
             rendered.push_str(&format!(
-                "tucano_http_requests_total{{method=\"{method}\",resource=\"{resource}\",status=\"{class}\"}} {count}\n"
+                "tatu_http_requests_total{{method=\"{method}\",resource=\"{resource}\",status=\"{class}\"}} {count}\n"
             ));
         }
         rendered
@@ -154,18 +154,18 @@ mod tests {
         metrics.record("GET", "unmatched", StatusCode::BAD_REQUEST);
 
         let rendered = metrics.render();
-        assert!(rendered.starts_with("# HELP tucano_http_requests_total Requests served"));
+        assert!(rendered.starts_with("# HELP tatu_http_requests_total Requests served"));
         assert!(rendered.contains(
-            "tucano_http_requests_total{method=\"GET\",resource=\"projects\",status=\"2xx\"} 2\n"
+            "tatu_http_requests_total{method=\"GET\",resource=\"projects\",status=\"2xx\"} 2\n"
         ));
         assert!(rendered.contains(
-            "tucano_http_requests_total{method=\"POST\",resource=\"projects\",status=\"2xx\"} 1\n"
+            "tatu_http_requests_total{method=\"POST\",resource=\"projects\",status=\"2xx\"} 1\n"
         ));
         assert!(rendered.contains(
-            "tucano_http_requests_total{method=\"GET\",resource=\"projects\",status=\"4xx\"} 1\n"
+            "tatu_http_requests_total{method=\"GET\",resource=\"projects\",status=\"4xx\"} 1\n"
         ));
         assert!(rendered.contains(
-            "tucano_http_requests_total{method=\"GET\",resource=\"unmatched\",status=\"4xx\"} 1\n"
+            "tatu_http_requests_total{method=\"GET\",resource=\"unmatched\",status=\"4xx\"} 1\n"
         ));
     }
 
@@ -173,7 +173,7 @@ mod tests {
     fn an_empty_store_renders_the_help_and_type_lines_only() {
         let rendered = HttpMetrics::new().render();
         assert_eq!(rendered.lines().count(), 2);
-        assert!(rendered.contains("# TYPE tucano_http_requests_total counter"));
+        assert!(rendered.contains("# TYPE tatu_http_requests_total counter"));
     }
 
     #[test]

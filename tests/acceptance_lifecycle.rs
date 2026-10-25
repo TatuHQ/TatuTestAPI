@@ -180,7 +180,7 @@ async fn the_lifecycle_mirrors_the_api_onto_the_disk() {
         .keys()
         .filter(|p| {
             p.file_name()
-                .map(|n| n.to_string_lossy().starts_with(".tucano-"))
+                .map(|n| n.to_string_lossy().starts_with(".tatu-"))
                 .unwrap_or(false)
         })
         .collect();

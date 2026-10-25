@@ -1,6 +1,6 @@
 //! Property tests for document deserialisation and identifier sanitisation.
 //!
-//! Every document type in [`tucano_test::models`] is driven through
+//! Every document type in [`tatu_test::models`] is driven through
 //! `serde_json::from_str`, `from_slice` and `from_value` with arbitrary input.
 //! A decode must answer — `Ok` or `Err` — and never panic, no matter how
 //! malformed the document is. The same contract is pinned for the parsers that
@@ -21,16 +21,16 @@ use std::path::{Component, Path, PathBuf};
 use proptest::collection;
 use proptest::prelude::*;
 use serde_json::Value;
-use tucano_test::domain::{
+use tatu_test::domain::{
     content_disposition, defect, import, mime_type, original_name, reports, validation,
 };
-use tucano_test::models::{
+use tatu_test::models::{
     Attachment, CaseHistoryEntry, CoverageReport, DefectLink, DefectLinkRequest, ImportCounts,
     ImportSummary, Milestone, MilestoneProgress, Project, StepAttachment, SuiteCoverage,
     SummaryReport, TestCase, TestCaseResult, TestCaseStep, TestConfiguration, TestRun, TestStep,
     TestSuite,
 };
-use tucano_test::storage::{
+use tatu_test::storage::{
     Parent, Resource, attachment_path, case_dir, case_marker, ensure_within, folder_name,
     folder_wire_id, node_folder, project_dir, project_document_path, project_marker, revision_dir,
     revision_marker, root_dir, step_attachment_path, step_dir, suite_dir, suite_marker,

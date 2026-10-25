@@ -43,7 +43,7 @@ curl -s -X POST http://localhost:3100/auth/login \
 ```
 
 `LoginRequest` is exactly two fields, `username` and `password`, and both are required. In the
-shipped Compose stack the account is the `TUCANO_BOOTSTRAP_USERNAME`/`TUCANO_BOOTSTRAP_PASSWORD`
+shipped Compose stack the account is the `TATU_BOOTSTRAP_USERNAME`/`TATU_BOOTSTRAP_PASSWORD`
 pair from `.env`; the placeholders below stand in for your own credentials.
 
 **3. Keep the access token in a variable.** `expiresIn` is seconds until the access token dies:
@@ -72,17 +72,17 @@ refresh before it expires.** Everything below is detail on top of it.
 ## What authentication is, and when it applies
 
 **The shipped Compose stack authenticates by default** — `docker-compose.yml` sets
-`TUCANO_AUTH_REQUIRED=true` and takes the signing secret and bootstrap account from `.env`. The
-*service's* own default is `false`: with `TUCANO_AUTH_REQUIRED` unset or `false` every route is
+`TATU_AUTH_REQUIRED=true` and takes the signing secret and bootstrap account from `.env`. The
+*service's* own default is `false`: with `TATU_AUTH_REQUIRED` unset or `false` every route is
 anonymous and no token is needed, which is only safe on a machine nothing else can reach. Turning it
 on in a hand-rolled deployment requires a signing secret of at least 32 bytes:
 
 ```yaml
     environment:
-      TUCANO_AUTH_REQUIRED: "true"
-      TUCANO_JWT_SECRET: "a-development-secret-of-at-least-32-bytes"
-      TUCANO_BOOTSTRAP_USERNAME: admin
-      TUCANO_BOOTSTRAP_PASSWORD: change-me-please
+      TATU_AUTH_REQUIRED: "true"
+      TATU_JWT_SECRET: "a-development-secret-of-at-least-32-bytes"
+      TATU_BOOTSTRAP_USERNAME: admin
+      TATU_BOOTSTRAP_PASSWORD: change-me-please
 ```
 
 The bootstrap pair creates the first `systemAdmin` account, but **only when the auth store holds no
@@ -109,7 +109,7 @@ normal and is not evidence that something is broken; a direct read or write of a
 reach answers `403 forbidden`. Creating or duplicating a project requires `systemAdmin`.
 
 > **There is no grant-administration route yet.** Accounts and per-project roles live as JSON under
-> `$TUCANO_DATA_DIR/auth/` and are provisioned out of band. A client cannot grant itself access, and
+> `$TATU_DATA_DIR/auth/` and are provisioned out of band. A client cannot grant itself access, and
 > an integration test that needs a non-administrator account has to provision it directly.
 
 ## Tokens: the access token, the refresh token, and the window
@@ -118,8 +118,8 @@ Two tokens come back from a sign-in, and they behave differently:
 
 | Token | Lifetime (default) | Sent where | Behaviour |
 | --- | --- | --- | --- |
-| `accessToken` | `TUCANO_ACCESS_TOKEN_TTL`, default `15m` | `Authorization: Bearer …` on every guarded call | Stateless: its signature and expiry are the whole check |
-| `refreshToken` | `TUCANO_REFRESH_TOKEN_TTL`, default `14d` | Body of `POST /auth/refresh` | Single-use — **rotated on every exchange** |
+| `accessToken` | `TATU_ACCESS_TOKEN_TTL`, default `15m` | `Authorization: Bearer …` on every guarded call | Stateless: its signature and expiry are the whole check |
+| `refreshToken` | `TATU_REFRESH_TOKEN_TTL`, default `14d` | Body of `POST /auth/refresh` | Single-use — **rotated on every exchange** |
 
 **The access token is stateless, and that is a property clients must design around.** Nothing is
 re-read when it is presented: a role revoked, a password changed, or an account disabled after the
@@ -200,7 +200,7 @@ API honours it and echoes the same value back.
 token" without parsing the body:
 
 ```
-www-authenticate: Bearer realm="Tucano Test API"
+www-authenticate: Bearer realm="TatuTest API"
 ```
 
 The `realm` is quoted. When the token itself was rejected rather than absent, the challenge adds
@@ -295,11 +295,11 @@ Both carry the challenge header, and both name their specific code in the envelo
 | Every public route works but the first data call answers `401` | The token was not sent. The public routes need no header and succeed without one, which can mask a missing `Authorization` |
 | A `403 forbidden` where you expected `404` | The route is project-scoped and your token does not reach the project. It is authorization, not a typo in the identifier |
 | An empty listing where you expected data | Listings are **filtered** to the projects the token reaches. An empty list is a statement about permissions |
-| A role you changed has no effect | The access token is stateless. The change lands when the token expires — shorten `TUCANO_ACCESS_TOKEN_TTL` if that window is too wide |
+| A role you changed has no effect | The access token is stateless. The change lands when the token expires — shorten `TATU_ACCESS_TOKEN_TTL` if that window is too wide |
 | `413` with a plain-text body | A request body over 50 MiB. It is answered before the handler runs, so it does not use the envelope |
 | `{"error":{"code":"invalid_request"}}` on a payload copied from a page | The schema refuses unknown properties. Check the field against `openapi.json` rather than against prose |
 | The password and the first call use different `curl` invocations and the token is empty | The login failed. Read the envelope — it is almost always `invalid_credentials` |
-| `invalid_credentials` where the username is definitely right | The two causes are deliberately indistinguishable. Confirm the account exists in `$TUCANO_DATA_DIR/auth/` |
+| `invalid_credentials` where the username is definitely right | The two causes are deliberately indistinguishable. Confirm the account exists in `$TATU_DATA_DIR/auth/` |
 
 ## Next
 

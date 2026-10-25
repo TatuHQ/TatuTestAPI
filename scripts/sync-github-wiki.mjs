@@ -9,7 +9,7 @@
 // as a build step. Nothing is ever edited in the wiki repository directly — the
 // next publish overwrites it.
 //
-// GitHub Wiki is a git repository (TucanoTestAPI.wiki.git) whose pages are flat:
+// GitHub Wiki is a git repository (TatuTestAPI.wiki.git) whose pages are flat:
 //   Home.md, Installation-and-first-project.md, ...
 // A link between wiki pages is therefore a bare <Page-Name> (or [[Page Name]]),
 // not a relative path, and there is no subdirectory structure. This script
@@ -106,7 +106,7 @@ function rewriteLinks(source, sourcePath) {
     // Anything else (a directory, a file outside docs/) points at the
     // repository, where the reader can actually open it.
     if (sourceForTarget) {
-      const url = `https://github.com/TucanoTechnology/TucanoTestAPI/blob/main/docs/${sourceForTarget}${fragment ? `#${fragment}` : ""}`;
+      const url = `https://github.com/TatuHQ/TatuTestAPI/blob/main/docs/${sourceForTarget}${fragment ? `#${fragment}` : ""}`;
       return `[${text}](${url}${title})`;
     }
 
@@ -116,7 +116,7 @@ function rewriteLinks(source, sourcePath) {
     const fromRepoRoot = resolve(sourceDir, decodeURIComponent(file));
     if (fromRepoRoot.startsWith(repoRoot) && existsSync(fromRepoRoot)) {
       const repoRelative = fromRepoRoot.slice(repoRoot.length + 1).split("\\").join("/");
-      const url = `https://github.com/TucanoTechnology/TucanoTestAPI/blob/main/${repoRelative}${fragment ? `#${fragment}` : ""}`;
+      const url = `https://github.com/TatuHQ/TatuTestAPI/blob/main/${repoRelative}${fragment ? `#${fragment}` : ""}`;
       return `[${text}](${url}${title})`;
     }
     return whole;

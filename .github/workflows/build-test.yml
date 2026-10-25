@@ -34,9 +34,9 @@ jobs:
       # so that only the first run (or a toolchain bump) needs the network.
       options: --dns 8.8.8.8 --dns 1.1.1.1
       volumes:
-        - tucanotestapi-cargo-registry:/usr/local/cargo/registry
-        - tucanotestapi-cargo-git:/usr/local/cargo/git
-        - tucanotestapi-rustup:/usr/local/rustup
+        - tatutestapi-cargo-registry:/usr/local/cargo/registry
+        - tatutestapi-cargo-git:/usr/local/cargo/git
+        - tatutestapi-rustup:/usr/local/rustup
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Sync Rust toolchain
@@ -68,9 +68,9 @@ jobs:
       # see the note in the rustdoc job above and issue #123.
       options: --dns 8.8.8.8 --dns 1.1.1.1
       volumes:
-        - tucanotestapi-cargo-registry:/usr/local/cargo/registry
-        - tucanotestapi-cargo-git:/usr/local/cargo/git
-        - tucanotestapi-rustup:/usr/local/rustup
+        - tatutestapi-cargo-registry:/usr/local/cargo/registry
+        - tatutestapi-cargo-git:/usr/local/cargo/git
+        - tatutestapi-rustup:/usr/local/rustup
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Sync Rust toolchain
@@ -102,9 +102,9 @@ jobs:
       # see the note in the rustdoc job above and issue #123.
       options: --dns 8.8.8.8 --dns 1.1.1.1
       volumes:
-        - tucanotestapi-cargo-registry:/usr/local/cargo/registry
-        - tucanotestapi-cargo-git:/usr/local/cargo/git
-        - tucanotestapi-rustup:/usr/local/rustup
+        - tatutestapi-cargo-registry:/usr/local/cargo/registry
+        - tatutestapi-cargo-git:/usr/local/cargo/git
+        - tatutestapi-rustup:/usr/local/rustup
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Sync Rust toolchain
@@ -131,9 +131,9 @@ jobs:
       # see the note in the rustdoc job above and issue #123.
       options: --dns 8.8.8.8 --dns 1.1.1.1
       volumes:
-        - tucanotestapi-cargo-registry:/usr/local/cargo/registry
-        - tucanotestapi-cargo-git:/usr/local/cargo/git
-        - tucanotestapi-rustup:/usr/local/rustup
+        - tatutestapi-cargo-registry:/usr/local/cargo/registry
+        - tatutestapi-cargo-git:/usr/local/cargo/git
+        - tatutestapi-rustup:/usr/local/rustup
     env:
       RUSTUP_TOOLCHAIN: "1.98.0"
     steps:
@@ -160,11 +160,11 @@ jobs:
       image: rust:1.98.0-bookworm@sha256:82150a52ec202c1b14d7817e14516c392bb7f5cfebd88f1ed531cb37ebd39922
       options: --dns 8.8.8.8 --dns 1.1.1.1
       volumes:
-        - tucanotestapi-cargo-registry:/usr/local/cargo/registry
-        - tucanotestapi-cargo-git:/usr/local/cargo/git
+        - tatutestapi-cargo-registry:/usr/local/cargo/registry
+        - tatutestapi-cargo-git:/usr/local/cargo/git
         # The nightly installs into the same rustup volume every other job
         # caches, so the download is paid once per fleet.
-        - tucanotestapi-rustup:/usr/local/rustup
+        - tatutestapi-rustup:/usr/local/rustup
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install the pinned nightly
@@ -193,10 +193,10 @@ jobs:
     # seed correctly refused; the job now matches the compose file it is
     # meant to prove (#419 follow-up to its own first execution).
     env:
-      TUCANO_AUTH_REQUIRED: "true"
-      TUCANO_JWT_SECRET: "container-smoke-secret-of-at-least-32-bytes!!"
-      TUCANO_BOOTSTRAP_USERNAME: "smoke"
-      TUCANO_BOOTSTRAP_PASSWORD: "container-smoke-bootstrap-password"
+      TATU_AUTH_REQUIRED: "true"
+      TATU_JWT_SECRET: "container-smoke-secret-of-at-least-32-bytes!!"
+      TATU_BOOTSTRAP_USERNAME: "smoke"
+      TATU_BOOTSTRAP_PASSWORD: "container-smoke-bootstrap-password"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -207,25 +207,25 @@ jobs:
           file: Dockerfile
           push: false
           load: true
-          tags: tucano-smoke:${{ github.sha }}
+          tags: tatu-smoke:${{ github.sha }}
           # Same buildx cache scope the container-scan job warms: the image
           # this job runs is the image the scanner just scanned.
           cache-from: type=gha,scope=container-scan
           cache-to: type=gha,mode=max,scope=container-scan
       - name: Boot it against an empty volume, like a first deployment
         run: |
-          docker volume create tucano-smoke-${{ github.run_id }}
+          docker volume create tatu-smoke-${{ github.run_id }}
           # The named volume is seeded from the image at creation, so it
           # arrives owned by the service account (uid 10001) — the real
           # first-deploy condition, not a root-owned accident.
-          docker run -d --rm --name tucano-smoke-${{ github.run_id }} \
-            --volume tucano-smoke-${{ github.run_id }}:/data \
+          docker run -d --rm --name tatu-smoke-${{ github.run_id }} \
+            --volume tatu-smoke-${{ github.run_id }}:/data \
             --publish 3009:3000 \
-            --env TUCANO_AUTH_REQUIRED \
-            --env TUCANO_JWT_SECRET \
-            --env TUCANO_BOOTSTRAP_USERNAME \
-            --env TUCANO_BOOTSTRAP_PASSWORD \
-            tucano-smoke:${{ github.sha }}
+            --env TATU_AUTH_REQUIRED \
+            --env TATU_JWT_SECRET \
+            --env TATU_BOOTSTRAP_USERNAME \
+            --env TATU_BOOTSTRAP_PASSWORD \
+            tatu-smoke:${{ github.sha }}
       - name: Wait for /health, and read the boot self-identification (#418)
         run: |
           ready=""
@@ -234,12 +234,12 @@ jobs:
             sleep 1
           done
           if [ -z "$ready" ]; then
-            docker logs tucano-smoke-${{ github.run_id }} 2>&1 || true
+            docker logs tatu-smoke-${{ github.run_id }} 2>&1 || true
             exit 1
           fi
-          logs=$(docker logs tucano-smoke-${{ github.run_id }} 2>&1 | head -n 3)
+          logs=$(docker logs tatu-smoke-${{ github.run_id }} 2>&1 | head -n 3)
           echo "$logs"
-          echo "$logs" | grep -q 'tucano.boot' \
+          echo "$logs" | grep -q 'tatu.boot' \
             || { echo "the boot line must self-identify the build (#418)"; exit 1; }
           echo "$logs" | grep -q 'auth_required=true' \
             || { echo "the smoke container must boot in the shipped auth posture"; exit 1; }
@@ -251,9 +251,9 @@ jobs:
           # demo.sh runs the same command through `compose exec`; here the
           # exec targets the smoke container directly, against the volume the
           # server reads while it serves.
-          TUCANO_SEED_AUTH_CMD: docker exec -t tucano-smoke-${{ github.run_id }} tucano-test seed-auth
+          TATU_SEED_AUTH_CMD: docker exec -t tatu-smoke-${{ github.run_id }} tatu-test seed-auth
           # smoke.sh authenticates under its OWN names (SMOKE_USERNAME/
-          # SMOKE_PASSWORD, not the TUCANO_BOOTSTRAP_* the seed and validator
+          # SMOKE_PASSWORD, not the TATU_BOOTSTRAP_* the seed and validator
           # read): unset, it signs in nobody and serves the anonymous posture
           # by design — on this auth-enforced container that reads as the
           # 401 that failed the last run. Same smoke bootstrap account.
@@ -267,11 +267,11 @@ jobs:
         run: |
           # Config-parse only: the values are placeholders for the required
           # variable checks, not a deployment.
-          TUCANO_JWT_SECRET="container-smoke-placeholder-secret-000" \
-          TUCANO_BOOTSTRAP_PASSWORD="container-smoke-placeholder" \
+          TATU_JWT_SECRET="container-smoke-placeholder-secret-000" \
+          TATU_BOOTSTRAP_PASSWORD="container-smoke-placeholder" \
             docker compose --file docker-compose.yml config --quiet
       - name: Tear down
         if: always()
         run: |
-          docker rm -f tucano-smoke-${{ github.run_id }} 2>/dev/null || true
-          docker volume rm tucano-smoke-${{ github.run_id }} 2>/dev/null || true
+          docker rm -f tatu-smoke-${{ github.run_id }} 2>/dev/null || true
+          docker volume rm tatu-smoke-${{ github.run_id }} 2>/dev/null || true

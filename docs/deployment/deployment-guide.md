@@ -1,7 +1,7 @@
 # Deployment Guide
 
-Issue: [#105](https://github.com/TucanoTechnology/TucanoTestAPI/issues/105), split from
-[#15](https://github.com/TucanoTechnology/TucanoTestAPI/issues/15). This is the operator-facing
+Issue: [#105](https://github.com/TatuHQ/TatuTestAPI/issues/105), split from
+[#15](https://github.com/TatuHQ/TatuTestAPI/issues/15). This is the operator-facing
 companion to the release engineering rules in [`AGENTS.md`](../../AGENTS.md) and to the
 step-by-step promotion and rollback procedure in
 [`docs/deployment/canary-validation-and-rollback.md`](canary-validation-and-rollback.md).
@@ -11,12 +11,12 @@ It is an operations document: it adds no route, no field and no stored-document 
 ## What is deployed
 
 Two containers, each built from its own Dockerfile — the API's from this repository, the GUI's from
-the TucanoTestGUI repository:
+the TatuTestGUI repository:
 
 | Service | Image | Dockerfile | Host port |
 | --- | --- | --- | --- |
-| API | `ghcr.io/tucanotechnology/tucanotestapi` (released); `tucano-test-api:local` (Compose build) | [`Dockerfile`](../../Dockerfile) | `3100` → container `3000` |
-| GUI | `tucano-test-gui:local` | `../TucanoTestGUI/Dockerfile` | `8080` → container `8080` |
+| API | `ghcr.io/tatuhq/tatutestapi` (released); `tatu-test-api:local` (Compose build) | [`Dockerfile`](../../Dockerfile) | `3100` → container `3000` |
+| GUI | `tatu-test-gui:local` | `../TatuTestGUI/Dockerfile` | `8080` → container `8080` |
 
 The two `…:local` names are **local build outputs, not release tags**: `docker compose up --build`
 retags them on every build, so whatever ran before loses the name. A rollback that targets one of
@@ -30,7 +30,7 @@ the same HTTP contract and never accesses the data directory directly
 
 Released images come from the release workflow
 ([`.github/workflows/release.yml`](../../.github/workflows/release.yml)), which pushes to
-`ghcr.io/${{ github.repository }}` — that is, `ghcr.io/tucanotechnology/tucanotestapi` — on every
+`ghcr.io/${{ github.repository }}` — that is, `ghcr.io/tatuhq/tatutestapi` — on every
 push to `main` and every `v*.*.*` tag, with two immutable tags:
 
 - `vMAJOR.MINOR.PATCH` for a SemVer release (`type=ref,event=tag`);
@@ -47,8 +47,8 @@ publishes under both tag forms described above.
 
 ## The JSON volume mount is the only state
 
-`TUCANO_DATA_DIR` is the entire persistent state of the service. The image sets it to `/data`
-(`ENV TUCANO_DATA_DIR=/data`) and declares that path a volume (`VOLUME ["/data"]`); a deployment
+`TATU_DATA_DIR` is the entire persistent state of the service. The image sets it to `/data`
+(`ENV TATU_DATA_DIR=/data`) and declares that path a volume (`VOLUME ["/data"]`); a deployment
 mounts durable storage there. Everything the API persists lives beneath it as plain JSON documents
 and folders — projects, suites, cases, runs, milestones, configurations, and their attachments —
 and the container holds nothing that must survive a restart:
@@ -65,7 +65,7 @@ and the container holds nothing that must survive a restart:
   the API answers; which port it uses has no bearing on what is stored.
 - **Everything written is owner-only.** The store creates stored files with mode `0600` and stored
   directories with mode `0700`, so the tree can be read only by the account the service runs as —
-  `tucano`, uid `10001`, in the image (see *Container hardening* below). Reading the volume from
+  `tatu`, uid `10001`, in the image (see *Container hardening* below). Reading the volume from
   outside the service therefore means using that account: a backup job, an inspection shell or a
   second replica pointed at the same volume must run as the same uid (or as `root`), because under
   any other uid the stored directories cannot even be traversed. The modes are applied as files and
@@ -92,15 +92,15 @@ operator's own labels on hosts that do enforce. The refusal message names path a
 on an enforcing host where those already look right, `ls -dZ ./data` showing a non-container type
 is the third suspect (#450).
 This is the property that makes both scaling and rollback possible: two containers pointed at the
-same `TUCANO_DATA_DIR` see the same data.
+same `TATU_DATA_DIR` see the same data.
 
 ### Storage layout v3 and legacy volumes
 
-Since layout v3 ([#215](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215)) a test run, a
+Since layout v3 ([#215](https://github.com/TatuHQ/TatuTestAPI/issues/215)) a test run, a
 milestone and a configuration each live inside the project that governs them, as a flat `<id>.json`
 under `projects/<project>/test_runs/`, `projects/<project>/milestones/` and
 `projects/<project>/configurations/`. A volume written by an earlier build keeps those three
-collections at the root of `TUCANO_DATA_DIR` instead, so the service **refuses to start** rather than
+collections at the root of `TATU_DATA_DIR` instead, so the service **refuses to start** rather than
 serve a data set it can only partly read: before the listener binds, the storage layer counts the
 `*.json` documents in the root `test_runs/`, `milestones/` and `configurations/`, and aborts with a
 message naming the counts and this document:
@@ -113,7 +113,7 @@ document into projects/<project>/<collection>/ and restart (docs/deployment/depl
 
 The check is read-only. It counts plain `*.json` files and nothing else: an absent directory, an
 **empty** one (the pre-v3 build created all three on startup, so most volumes have one), a
-subdirectory, a symlink and the atomic-write temporary pattern `.tucano-*.tmp` are all ignored.
+subdirectory, a symlink and the atomic-write temporary pattern `.tatu-*.tmp` are all ignored.
 Nothing is moved, rewritten or deleted — a legacy document is left exactly where the operator put
 it.
 
@@ -124,7 +124,7 @@ recipe:
 
 1. **Stop the service** (`docker compose stop api`), so nothing writes while files move.
 2. **Copy the volume** before touching it:
-   `tar -C "$DATA_DIR" -czf "tucano-data-$(date +%Y%m%d-%H%M%S).tgz" .`
+   `tar -C "$DATA_DIR" -czf "tatu-data-$(date +%Y%m%d-%H%M%S).tgz" .`
 3. **Move each document into its project.** Create
    `$DATA_DIR/projects/<project>/{test_runs,milestones,configurations}/` as needed and move the file
    in: a run goes to a project its `projects` array names, a milestone to a project its
@@ -147,7 +147,7 @@ and the bootstrap password, which the checked-in file reads from the environment
 
 ```sh
 cp .env.example .env
-# set TUCANO_JWT_SECRET (at least 32 bytes) and TUCANO_BOOTSTRAP_PASSWORD
+# set TATU_JWT_SECRET (at least 32 bytes) and TATU_BOOTSTRAP_PASSWORD
 docker compose up -d --build
 ```
 
@@ -168,15 +168,15 @@ services:
     # rollback therefore records the running container's image id and pins it
     # under a rollback-only tag *before* rebuilding — see "Rollback" in
     # docs/deployment/canary-validation-and-rollback.md (audit finding F-178-2).
-    image: tucano-test-api:local
+    image: tatu-test-api:local
     environment:
-      TUCANO_DATA_DIR: /data
+      TATU_DATA_DIR: /data
       PORT: 3000
-      TUCANO_AUTH_REQUIRED: "${TUCANO_AUTH_REQUIRED:-true}"
-      TUCANO_LOCK_TIMEOUT_MS: "${TUCANO_LOCK_TIMEOUT_MS:-5000}"
-      TUCANO_JWT_SECRET: "${TUCANO_JWT_SECRET:?TUCANO_JWT_SECRET is required and must be at least 32 bytes; copy .env.example to .env and set it}"
-      TUCANO_BOOTSTRAP_USERNAME: "${TUCANO_BOOTSTRAP_USERNAME:-admin}"
-      TUCANO_BOOTSTRAP_PASSWORD: "${TUCANO_BOOTSTRAP_PASSWORD:?TUCANO_BOOTSTRAP_PASSWORD is required; copy .env.example to .env and set it}"
+      TATU_AUTH_REQUIRED: "${TATU_AUTH_REQUIRED:-true}"
+      TATU_LOCK_TIMEOUT_MS: "${TATU_LOCK_TIMEOUT_MS:-5000}"
+      TATU_JWT_SECRET: "${TATU_JWT_SECRET:?TATU_JWT_SECRET is required and must be at least 32 bytes; copy .env.example to .env and set it}"
+      TATU_BOOTSTRAP_USERNAME: "${TATU_BOOTSTRAP_USERNAME:-admin}"
+      TATU_BOOTSTRAP_PASSWORD: "${TATU_BOOTSTRAP_PASSWORD:?TATU_BOOTSTRAP_PASSWORD is required; copy .env.example to .env and set it}"
     ports:
       - "3100:3000"
     volumes:
@@ -199,33 +199,33 @@ services:
 ```
 
 (The checked-in file carries short explanatory comments above the image name and several of the
-environment variables; the values are reproduced above verbatim. `TUCANO_LOCK_TIMEOUT_MS` bounds
+environment variables; the values are reproduced above verbatim. `TATU_LOCK_TIMEOUT_MS` bounds
 each write's wait for the data volume's advisory lock — the `503 lock_timeout` behaviour is
 described under Errors and request limits in the [storage and API reference](../reference/storage-and-api.md).)
 
-`TUCANO_DATA_DIR=/data` and the `./data:/data` mount together are the whole persistence story: the
+`TATU_DATA_DIR=/data` and the `./data:/data` mount together are the whole persistence story: the
 host directory `./data` is the state (Docker creates it on first run), and `.gitignore` excludes
 `/data/*` — with an explicit carve-out for a `/data/.gitkeep` marker — so test data is never
 committed.
 
 > **Note on the ticket wording.** Issue #105 describes the Compose volume as
-> `tucano-test-data` → `/data`. The checked-in file above actually bind-mounts the host directory
+> `tatu-test-data` → `/data`. The checked-in file above actually bind-mounts the host directory
 > `./data`, which is convenient for a single developer machine (the JSON is directly inspectable in
 > the repository working copy). Both forms mount durable storage at `/data`; a deployment that
 > prefers a managed named volume substitutes:
 
 ```yaml
     volumes:
-      - tucano-test-data:/data
+      - tatu-test-data:/data
 ```
 
-which requires the volume to exist (`docker volume create tucano-test-data`, or simply let Compose
+which requires the volume to exist (`docker volume create tatu-test-data`, or simply let Compose
 create it) and moves where the data physically lives. Nothing else changes: the container contract
 is the path `/data`, never the volume's name.
 
 ### Enabling authentication
 
-The shipped `docker-compose.yml` **enables it**: it sets `TUCANO_AUTH_REQUIRED=true` and takes the
+The shipped `docker-compose.yml` **enables it**: it sets `TATU_AUTH_REQUIRED=true` and takes the
 signing secret and the bootstrap account from `.env`, so the local stack is authenticated out of the
 box. The *service's* own default is `false`, so a deployment that supplies its own container
 definition and does not set the variable keeps the historic anonymous behaviour until the operator
@@ -233,30 +233,30 @@ opts in. Turning it on requires a signing secret and, on a fresh volume, a boots
 
 | Variable | Purpose |
 | --- | --- |
-| `TUCANO_AUTH_REQUIRED` | `true` makes every guarded route require a bearer token. The checked-in Compose file applies `true`; the service's built-in default is `false`. |
-| `TUCANO_JWT_SECRET` | The HS256 signing secret, at least 32 bytes. Mutually exclusive with `TUCANO_JWT_SECRET_FILE`. |
-| `TUCANO_JWT_SECRET_FILE` | Path to a file holding the secret (surrounding whitespace trimmed) — the preferred form here, so the secret is not visible in `docker inspect`. |
-| `TUCANO_ACCESS_TOKEN_TTL` / `TUCANO_REFRESH_TOKEN_TTL` | Access-token and refresh-token lifetimes (defaults `15m` and `14d`). |
-| `TUCANO_BOOTSTRAP_USERNAME` / `TUCANO_BOOTSTRAP_PASSWORD` | Set **together** to create the first `systemAdmin` account when the volume holds none; skip once the account exists. |
+| `TATU_AUTH_REQUIRED` | `true` makes every guarded route require a bearer token. The checked-in Compose file applies `true`; the service's built-in default is `false`. |
+| `TATU_JWT_SECRET` | The HS256 signing secret, at least 32 bytes. Mutually exclusive with `TATU_JWT_SECRET_FILE`. |
+| `TATU_JWT_SECRET_FILE` | Path to a file holding the secret (surrounding whitespace trimmed) — the preferred form here, so the secret is not visible in `docker inspect`. |
+| `TATU_ACCESS_TOKEN_TTL` / `TATU_REFRESH_TOKEN_TTL` | Access-token and refresh-token lifetimes (defaults `15m` and `14d`). |
+| `TATU_BOOTSTRAP_USERNAME` / `TATU_BOOTSTRAP_PASSWORD` | Set **together** to create the first `systemAdmin` account when the volume holds none; skip once the account exists. |
 
 With `read_only: true` the secret file must be mounted read-only, for example
-`--mount type=bind,src=/etc/tucano/jwt-secret,dst=/run/secrets/jwt-secret,readonly` plus
-`--env TUCANO_JWT_SECRET_FILE=/run/secrets/jwt-secret`. Accounts and per-project grants are read from
-`$TUCANO_DATA_DIR/auth/`; there is no grant-administration API yet, so provision that tree out of
+`--mount type=bind,src=/etc/tatu/jwt-secret,dst=/run/secrets/jwt-secret,readonly` plus
+`--env TATU_JWT_SECRET_FILE=/run/secrets/jwt-secret`. Accounts and per-project grants are read from
+`$TATU_DATA_DIR/auth/`; there is no grant-administration API yet, so provision that tree out of
 band. See [docs/security/authentication-decision.md](../security/authentication-decision.md) and the
 threat model's "Known limitations" before exposing the service beyond a trusted network.
 
 ### The configuration file
 
 Every setting the table above names can also come from an optional JSON file, named by the
-environment-only `TUCANO_CONFIG_FILE`. The model and its rationale are the decision of record,
+environment-only `TATU_CONFIG_FILE`. The model and its rationale are the decision of record,
 [docs/security/configuration-decision.md](../security/configuration-decision.md); the shipped
 template is [`config.example.json`](config.example.json), and a unit test parses it so the example
 cannot drift from the schema the server implements.
 
 ```sh
---env TUCANO_CONFIG_FILE=/etc/tucano-test/config.json \
---mount type=bind,src=/etc/tucano-test/config.json,dst=/etc/tucano-test/config.json,readonly
+--env TATU_CONFIG_FILE=/etc/tatu-test/config.json \
+--mount type=bind,src=/etc/tatu-test/config.json,dst=/etc/tatu-test/config.json,readonly
 ```
 
 | Property | Rule |
@@ -265,26 +265,26 @@ cannot drift from the schema the server implements.
 | Precedence | Resolved **per key**: environment, then file, then the built-in default. A file may supply one setting while the environment supplies another. |
 | Version marker | `version` is mandatory and must be `1`. Any other value is refused by number rather than half-read. |
 | Unknown keys | Refused. A typo'd key name is a startup error instead of a setting that silently never applies. |
-| Absence | No `TUCANO_CONFIG_FILE` means no file is consulted at all: the pre-file behaviour, unchanged. There is no implicit default path. |
+| Absence | No `TATU_CONFIG_FILE` means no file is consulted at all: the pre-file behaviour, unchanged. There is no implicit default path. |
 | Writes | None, ever. The file is read-only for the process and the service never creates one, which keeps `read_only: true` intact. |
 | Secrets | Permitted in the file, but no secret may exist *only* there — it must also be reachable from the environment. Inline and file forms of the secret together are a conflict, and fewer than 32 bytes is refused. |
 | Error text | Names the setting, never the value: no secret, no raw file path and no file contents appear in a log line, an error envelope or a response. |
 
-`TUCANO_DATA_DIR`, `PORT` and `TUCANO_CONFIG_FILE` itself stay environment-only: all three must be
+`TATU_DATA_DIR`, `PORT` and `TATU_CONFIG_FILE` itself stay environment-only: all three must be
 readable *before* the file can be located, and the orchestrator owns them. Mounting the file
 read-only matches the secret-file pattern above; a deployment that keeps all settings in the
-environment simply leaves `TUCANO_CONFIG_FILE` unset.
+environment simply leaves `TATU_CONFIG_FILE` unset.
 
 Secret fields (`jwt_secret`, `bootstrap_password`) may be stored as AES-256-GCM encrypted
 envelopes in the file, with the decryption key supplied through a separate read-only key file
-(`TUCANO_CONFIG_KEY_FILE`). Key rotation is supported through a multi-key ring. See the
+(`TATU_CONFIG_KEY_FILE`). Key rotation is supported through a multi-key ring. See the
 [configuration reference](configuration-reference.md#encrypted-secrets) and the
 [decision document](../security/configuration-decision.md#key-management) for the envelope format
 and rotation procedure.
 
 ### Migrating from env-only configuration
 
-An existing env-only deployment keeps working unchanged: `TUCANO_CONFIG_FILE` unset means no file
+An existing env-only deployment keeps working unchanged: `TATU_CONFIG_FILE` unset means no file
 is consulted. Migration to a configuration file is optional and incremental — there is no flag day.
 
 **Step 1 — create the file.** Copy the values you want to move from the Compose `environment:`
@@ -305,19 +305,19 @@ service or `docker run`:
 
 ```yaml
 environment:
-  TUCANO_CONFIG_FILE: /etc/tucano-test/config.json
+  TATU_CONFIG_FILE: /etc/tatu-test/config.json
 volumes:
-  - ./config.json:/etc/tucano-test/config.json:ro
+  - ./config.json:/etc/tatu-test/config.json:ro
 ```
 
 **Step 3 — move secrets.** For secrets, prefer the encrypted envelope form with a key file
-mounted via `TUCANO_CONFIG_KEY_FILE`, or keep them in the environment and let the file hold
+mounted via `TATU_CONFIG_KEY_FILE`, or keep them in the environment and let the file hold
 only non-sensitive settings. Either way, the environment still wins per key, so a secret left
-in `TUCANO_JWT_SECRET` overrides whatever the file holds.
+in `TATU_JWT_SECRET` overrides whatever the file holds.
 
 **Step 4 — remove redundant variables.** Once a setting is confirmed in the file and the service
-starts correctly, remove it from the Compose `environment:` block. The `TUCANO_DATA_DIR`, `PORT`
-and `TUCANO_CONFIG_FILE` variables must always stay in the environment.
+starts correctly, remove it from the Compose `environment:` block. The `TATU_DATA_DIR`, `PORT`
+and `TATU_CONFIG_FILE` variables must always stay in the environment.
 
 No restart is required between steps: the file is read once at startup, and each change takes
 effect on the next `docker compose up -d`.
@@ -333,20 +333,20 @@ same hardened shape, matching what the Dockerfile already does:
 | `tmpfs: /tmp` / `--tmpfs /tmp` | A writable scratch area for the few temporary files the process needs. |
 | `security_opt: no-new-privileges:true` | A process can never gain more privilege than the container started with. |
 | `cap_drop: ALL` / `--cap-drop=ALL` | The container runs with no Linux capability at all. The service needs none: it binds a port above 1024, and reads and writes only paths it owns. |
-| `USER tucano` (uid `10001`) | The runtime image creates a system user `tucano` with no login shell and runs the service as it. |
+| `USER tatu` (uid `10001`) | The runtime image creates a system user `tatu` with no login shell and runs the service as it. |
 | `ca-certificates` only | The only package the runtime image installs is `ca-certificates`; the Rust toolchain stays in the build stage. |
 | `deploy.resources.limits` | Per-replica CPU (`1.0`) and memory (`512M`) ceilings. |
 | `restart: unless-stopped` | The container is restarted after a host reboot or crash unless an operator stopped it. |
 | `stop_grace_period: 30s` | SIGTERM starts the server's graceful drain — in-flight requests are answered, idle connections close, the process exits on its own — so the stop window must be long enough for the work it waits on (a parked write, at worst the lock deadline) to finish before Docker escalates to SIGKILL (#411). |
 
 A consequence worth internalising: because the root filesystem is read-only, the service must not
-be given anything to write outside `TUCANO_DATA_DIR` and `/tmp` — and it does not need to. If a
+be given anything to write outside `TATU_DATA_DIR` and `/tmp` — and it does not need to. If a
 change ever requires another writable path, that is a deployment-model change, not a container
 tweak.
 
 ## Scaling out
 
-A second replica is the same image, the same environment, and the same `TUCANO_DATA_DIR`. Because
+A second replica is the same image, the same environment, and the same `TATU_DATA_DIR`. Because
 replicas share no in-memory state, adding one needs no coordination — but it does need shared
 storage:
 
@@ -356,7 +356,7 @@ storage:
   mount path, with **working advisory locks**. Repository mutations take an advisory lock file and
   write by atomic same-directory rename; if the filesystem does not honour those locks, concurrent
   writers on different nodes can lose data. A write that cannot take the lock within
-  `TUCANO_LOCK_TIMEOUT_MS` (default `5000` ms) is refused with `503 lock_timeout` and a
+  `TATU_LOCK_TIMEOUT_MS` (default `5000` ms) is refused with `503 lock_timeout` and a
   `Retry-After` rather than waiting indefinitely, so contention surfaces to the client.
 - **Never give each replica its own volume.** Separate per-replica local volumes diverge: each
   replica would serve a different partial view of the data, and a create would be invisible to the
@@ -365,13 +365,13 @@ storage:
   (`0600`/`0700`), and the advisory lock file it serialises writers with is not writable by any
   other uid either. A replica running as a different uid from the one that wrote the data can
   neither traverse the tree nor take the lock, so it would answer `404` for documents that exist and
-  `503 lock_timeout` for writes. Run every replica as the same uid — the image's `tucano` (`10001`)
+  `503 lock_timeout` for writes. Run every replica as the same uid — the image's `tatu` (`10001`)
   is that uid by default — and make it the owner of the volume.
 
 The filesystem is the only storage backend. Object storage (S3) was declined as a persistence
 backend by [`docs/architecture/adr-object-storage.md`](../architecture/adr-object-storage.md), so
 there is no backend to select: a platform that offers object storage but no shared POSIX volume
-cannot host a multi-replica Tucano Test, and the supported answer there is a single node with one
+cannot host a multi-replica TatuTest, and the supported answer there is a single node with one
 shared volume. A bucket may be used only as an out-of-process mirror the API never reads from or
 writes to, under the caveats the ADR states. The backend inventory, its guarantees, and the full
 operational consequences are in
@@ -391,31 +391,31 @@ section records the tag and compatibility rules that procedure depends on.
 Record the tag that is serving before any change:
 
 ```sh
-IMAGE="ghcr.io/tucanotechnology/tucanotestapi"
+IMAGE="ghcr.io/tatuhq/tatutestapi"
 PREVIOUS="$IMAGE:build-4700"    # the tag currently deployed, or a vMAJOR.MINOR.PATCH release
 CANDIDATE="$IMAGE:build-4711"   # the tag under test
 ```
 
 The Compose build is the one path with no immutable tag to fall back to. The shipped
-`docker-compose.yml` composes `image: tucano-test-api:local` with `build: .`, so `--build` **retags
+`docker-compose.yml` composes `image: tatu-test-api:local` with `build: .`, so `--build` **retags
 that mutable name** and the image the previous container was running loses it — the engine may then
 collect it. Record the previous **image id**, and pin it under a rollback-only tag *before* building
 the candidate (reading the id from the container, not from the tag, which can already have diverged):
 
 ```sh
 PREVIOUS_ID="$(docker inspect --format '{{.Image}}' "$(docker compose ps -q api)")"
-docker tag "$PREVIOUS_ID" tucano-test-api:rollback
+docker tag "$PREVIOUS_ID" tatu-test-api:rollback
 ```
 
 To roll back:
 
 1. Stop and remove the failing container (or point the Compose service back at the previously pinned
-   tag) and start `$PREVIOUS` against the **same** `TUCANO_DATA_DIR`. For the Compose build, put the
+   tag) and start `$PREVIOUS` against the **same** `TATU_DATA_DIR`. For the Compose build, put the
    recorded id back under the mutable name and recreate the service **without building** —
    `--no-build` is load-bearing, since a build here would retag the name to a fresh candidate:
 
    ```sh
-   docker tag tucano-test-api:rollback tucano-test-api:local
+   docker tag tatu-test-api:rollback tatu-test-api:local
    docker compose up --detach --no-deps --no-build --force-recreate api
    docker inspect --format '{{.Image}}' "$(docker compose ps -q api)"   # must equal "$PREVIOUS_ID"
    ```
@@ -469,7 +469,7 @@ layout, the refusal and the operator recipe are recorded in
 ## Deployment checklist
 
 - [ ] Image tag identified: a `vMAJOR.MINOR.PATCH` release tag or an immutable `build-<run number>` tag.
-- [ ] `TUCANO_DATA_DIR` (default `/data`) mounted on the intended durable storage for every replica.
+- [ ] `TATU_DATA_DIR` (default `/data`) mounted on the intended durable storage for every replica.
 - [ ] Volume layout checked: no `*.json` documents left in a root `test_runs/`, `milestones/` or
       `configurations/` directory — the service refuses to start when there are (see *Storage layout
       v3 and legacy volumes*).
@@ -486,10 +486,10 @@ layout, the refusal and the operator recipe are recorded in
 - [ ] Every replica runs as the same uid, and that uid owns the volume: stored files and directories
       are owner-only (`0600`/`0700`), so a replica under another uid cannot read the tree or take the
       advisory lock.
-- [ ] Authentication decided: the shipped Compose file runs authenticated — `TUCANO_AUTH_REQUIRED=true`
-      plus `TUCANO_JWT_SECRET` and the bootstrap pair from `.env`. A deployment that turns it off
+- [ ] Authentication decided: the shipped Compose file runs authenticated — `TATU_AUTH_REQUIRED=true`
+      plus `TATU_JWT_SECRET` and the bootstrap pair from `.env`. A deployment that turns it off
       keeps the historic anonymous shape and must be reachable only from a trusted network.
-- [ ] Configuration decided: environment-only (no `TUCANO_CONFIG_FILE`), or a `version: 1` file
+- [ ] Configuration decided: environment-only (no `TATU_CONFIG_FILE`), or a `version: 1` file
       mounted read-only, with every secret it names also reachable from the environment.
 - [ ] Rollback target recorded — an immutable release tag, or, for the shipped Compose local build,
       the running container's image id pinned under a rollback-only tag *before* the candidate is
@@ -499,8 +499,8 @@ layout, the refusal and the operator recipe are recorded in
 | File | Role |
 | --- | --- |
 | [`docker-compose.yml`](../../docker-compose.yml) | The `api` and `gui` service definitions, volume mount, hardening and resource limits. |
-| [`.env.example`](../../.env.example) | The committed template for the `.env` file Compose loads, holding the JWT signing secret, the bootstrap account and the `TUCANO_AUTH_REQUIRED` default. |
-| [`Dockerfile`](../../Dockerfile) | Image build, `TUCANO_DATA_DIR=/data`, `PORT=3000`, unprivileged uid 10001, `VOLUME ["/data"]`. |
+| [`.env.example`](../../.env.example) | The committed template for the `.env` file Compose loads, holding the JWT signing secret, the bootstrap account and the `TATU_AUTH_REQUIRED` default. |
+| [`Dockerfile`](../../Dockerfile) | Image build, `TATU_DATA_DIR=/data`, `PORT=3000`, unprivileged uid 10001, `VOLUME ["/data"]`. |
 | [`config.example.json`](config.example.json) | The optional configuration-file template, kept valid against the loader's schema by a unit test. |
 | [`docs/security/configuration-decision.md`](../security/configuration-decision.md) | The configuration and secrets decision: precedence, key management, and the deferred encrypted format. |
 | [`docs/architecture/adr-storage-layout-v3.md`](../architecture/adr-storage-layout-v3.md) | ADR: where runs, milestones and configurations live, the legacy-layout startup refusal, and the v3 rollback consequence. |

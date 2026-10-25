@@ -16,7 +16,7 @@ use axum::{
 use tower::ServiceExt;
 
 use common::{app_at_with_guardrails, send_full, send_json, stalling_post};
-use tucano_test::api::{MAX_BODY_BYTES, guardrails::Guardrails};
+use tatu_test::api::{MAX_BODY_BYTES, guardrails::Guardrails};
 
 fn get(uri: &str) -> Request<Body> {
     Request::get(uri).body(Body::empty()).expect("get request")
@@ -155,7 +155,10 @@ async fn a_cancelled_request_leaves_the_store_clean_and_writable() {
     let directory = tempfile::TempDir::new().expect("temp dir");
     let app = app_at_with_guardrails(
         directory.path(),
-        guardrails(MAX_BODY_BYTES, Some(Duration::from_millis(60)), Some(4)),
+        // The test aborts the request after 20ms; the guardrail must be long
+        // enough that the follow-up write is not the thing it cuts off on a
+        // loaded CI runner.
+        guardrails(MAX_BODY_BYTES, Some(Duration::from_secs(5)), Some(4)),
     );
 
     let holder = {
@@ -176,7 +179,7 @@ async fn a_cancelled_request_leaves_the_store_clean_and_writable() {
         .filter_map(Result::ok)
         .filter(|entry| {
             let name = entry.file_name().to_string_lossy().to_string();
-            name.starts_with(".tucano-") && name.ends_with(".tmp")
+            name.starts_with(".tatu-") && name.ends_with(".tmp")
         })
         .collect();
     assert!(leftovers.is_empty(), "partial write left behind");

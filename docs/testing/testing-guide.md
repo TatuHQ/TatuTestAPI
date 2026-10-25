@@ -71,7 +71,7 @@ cargo test --test attachments             # a single API suite
 ```
 
 The crate exposes a library target (`src/lib.rs`) alongside the binary so integration tests can
-import `tucano_test::api` and drive the router directly, without binding a network port.
+import `tatu_test::api` and drive the router directly, without binding a network port.
 
 GitHub Actions runs workflow linting, formatting, Clippy, unit and integration tests, a release build,
 dependency auditing, secret scanning, production container scanning, and CycloneDX SBOM generation.

@@ -1,8 +1,8 @@
 # Wiki Structure, Source of Truth, and Publication (Issue #170)
 
-Issue: [#170](https://github.com/TucanoTechnology/TucanoTestAPI/issues/170) — decide how the project
+Issue: [#170](https://github.com/TatuHQ/TatuTestAPI/issues/170) — decide how the project
 wiki relates to the in-repo [`docs/`](../) tree and how it is published. Parent epic:
-[#165](https://github.com/TucanoTechnology/TucanoTestAPI/issues/165) — *Create project wiki*. This is
+[#165](https://github.com/TatuHQ/TatuTestAPI/issues/165) — *Create project wiki*. This is
 the blocking decision for the epic: it settles the structure, the source of truth and the publication
 mechanism before any wiki page is authored.
 
@@ -101,8 +101,8 @@ what it must not restate.
 Every planned page is a `docs/<category>/` file. The `docs/` categories that already exist —
 `architecture/`, `contracts/`, `deployment/`, `security/` — keep their current contents; the wiki adds
 the user-facing guides (`docs/guides/` for the how-to pages) and links the existing decision documents
-rather than duplicating them. Child tasks [#171](https://github.com/TucanoTechnology/TucanoTestAPI/issues/171)
-through [#174](https://github.com/TucanoTechnology/TucanoTestAPI/issues/174) each author one section and
+rather than duplicating them. Child tasks [#171](https://github.com/TatuHQ/TatuTestAPI/issues/171)
+through [#174](https://github.com/TatuHQ/TatuTestAPI/issues/174) each author one section and
 add their pages to `SUMMARY.md` and the README table.
 
 ## Publication mechanism
@@ -192,7 +192,7 @@ rejection, not a runtime surprise.
    `CONTRIBUTING.md` and `AGENTS.md`, and that the wiki index links
    every wiki page and no page that does not exist. A new page cannot be added without being
    discoverable, and the index cannot link a page that is missing — the defect issue
-   [#236](https://github.com/TucanoTechnology/TucanoTestAPI/issues/236) reported. This mirrors the
+   [#236](https://github.com/TatuHQ/TatuTestAPI/issues/236) reported. This mirrors the
    linkage requirement in [`AGENTS.md`](../../AGENTS.md).
 4. **The GitHub Wiki mapping must stay valid** — `node scripts/sync-github-wiki.mjs --check` asserts that
    every mirrored page still maps onto the flat wiki namespace without a name collision. It runs in the
@@ -217,6 +217,6 @@ together, in one reviewed revision.
 - The `wiki` job needs a `WIKI_TOKEN` secret to publish; without it the job is a no-op that says so.
   That is a deliberate trade — the wiki feature being enabled does not by itself grant the repository a
   credential that can write to another repository, and a missing credential should not fail a merge.
-- The child tasks of [#165](https://github.com/TucanoTechnology/TucanoTestAPI/issues/165) author pages
+- The child tasks of [#165](https://github.com/TatuHQ/TatuTestAPI/issues/165) author pages
   against this structure; this record unblocks them and is superseded only by another decision record
   under `docs/architecture/`.

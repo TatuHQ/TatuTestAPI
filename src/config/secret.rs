@@ -50,7 +50,7 @@
 //!
 //! No secret value, key material, or raw ciphertext appears in any error.
 //!
-//! [`docs/security/configuration-decision.md`]: https://github.com/TucanoTechnology/TucanoTestAPI/blob/main/docs/security/configuration-decision.md
+//! [`docs/security/configuration-decision.md`]: https://github.com/TatuHQ/TatuTestAPI/blob/main/docs/security/configuration-decision.md
 
 use std::env;
 use std::error::Error;
@@ -68,7 +68,7 @@ use serde::{Deserialize, Serialize};
 /// Like [`super::CONFIG_FILE_ENV`], this is environment-only: the orchestrator
 /// sets it before the process starts, and it must be readable before the
 /// configuration file can be decrypted.
-pub const CONFIG_KEY_FILE_ENV: &str = "TUCANO_CONFIG_KEY_FILE";
+pub const CONFIG_KEY_FILE_ENV: &str = "TATU_CONFIG_KEY_FILE";
 
 /// The only envelope version this build understands.
 pub const ENVELOPE_VERSION: u32 = 1;

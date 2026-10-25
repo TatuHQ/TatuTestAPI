@@ -31,21 +31,21 @@ use tokio::sync::Semaphore;
 use super::{AppState, error::envelope};
 use crate::storage::Repository;
 
-/// Default `TUCANO_REQUEST_TIMEOUT_MS`: five minutes.
+/// Default `TATU_REQUEST_TIMEOUT_MS`: five minutes.
 pub const DEFAULT_REQUEST_TIMEOUT_MS: u64 = 300_000;
-/// Default `TUCANO_MAX_CONCURRENCY`: 128 requests in flight.
+/// Default `TATU_MAX_CONCURRENCY`: 128 requests in flight.
 pub const DEFAULT_MAX_CONCURRENCY: usize = 128;
 
 /// The configured bounds a router enforces around every request.
 #[derive(Clone, Debug)]
 pub struct Guardrails {
-    /// Largest body the router accepts, in bytes (`TUCANO_MAX_BODY_BYTES`).
+    /// Largest body the router accepts, in bytes (`TATU_MAX_BODY_BYTES`).
     pub max_body_bytes: usize,
     /// Wall clock a request may take before it is cut off with `504`
-    /// (`TUCANO_REQUEST_TIMEOUT_MS`); `None` disables the timeout.
+    /// (`TATU_REQUEST_TIMEOUT_MS`); `None` disables the timeout.
     pub request_timeout: Option<Duration>,
     /// Requests allowed in flight before new ones are refused with `503`
-    /// (`TUCANO_MAX_CONCURRENCY`); `None` removes the cap.
+    /// (`TATU_MAX_CONCURRENCY`); `None` removes the cap.
     pub max_concurrency: Option<usize>,
 }
 

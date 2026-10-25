@@ -68,7 +68,7 @@ pub const ATTACHMENT_RESOURCE: &str = "attachment";
 
 /// Target every audit line is written under, so a deployment can route the audit
 /// trail away from its request log with a single directive.
-pub const AUDIT_TARGET: &str = "tucano.audit";
+pub const AUDIT_TARGET: &str = "tatu.audit";
 
 /// The noun an audit line names a [`Resource`] by, matching the vocabulary of
 /// the routes and of a response message.

@@ -1,6 +1,6 @@
 //! Fuzz target: no document decoder panics on arbitrary bytes.
 //!
-//! Every type in `tucano_test::models` is fed the same input through
+//! Every type in `tatu_test::models` is fed the same input through
 //! `serde_json::from_slice`. The contract is the one the property suite in
 //! `tests/property.rs` pins for smaller inputs: a decoder answers `Ok` or
 //! `Err`, and never panics, however malformed the document is.
@@ -13,7 +13,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use tucano_test::models::{
+use tatu_test::models::{
     Attachment, CaseHistoryEntry, CoverageReport, DefectLink, DefectLinkRequest, ImportCounts,
     ImportSummary, Milestone, MilestoneProgress, Project, StepAttachment, SuiteCoverage,
     SummaryReport, TestCase, TestCaseResult, TestCaseStep, TestConfiguration, TestRun, TestStep,

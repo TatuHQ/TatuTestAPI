@@ -1,6 +1,6 @@
 # Configuration Reference (Issue #190)
 
-Issue: [#190](https://github.com/TucanoTechnology/TucanoTestAPI/issues/190) — one table of every
+Issue: [#190](https://github.com/TatuHQ/TatuTestAPI/issues/190) — one table of every
 setting: name, environment variable, configuration file key, default, and security sensitivity.
 
 This document is the single source of truth for precedence. The decision record is
@@ -17,7 +17,7 @@ For every setting below, the effective value is resolved **per key** in this ord
 
 A deployment that sets one value in the file and another in the environment gets both: each
 setting's winner is decided independently. The configuration file is optional — an absent file
-(`TUCANO_CONFIG_FILE` unset) preserves the pre-file behaviour exactly.
+(`TATU_CONFIG_FILE` unset) preserves the pre-file behaviour exactly.
 
 ## Environment-only settings
 
@@ -27,16 +27,16 @@ rest are not part of the file's key map at all.
 
 | Setting | Environment variable | Default | Sensitivity | Notes |
 | --- | --- | --- | --- | --- |
-| Data directory | `TUCANO_DATA_DIR` | `data` | none | Decides where the data volume is. Must be settable by the orchestrator before any file can be read. |
+| Data directory | `TATU_DATA_DIR` | `data` | none | Decides where the data volume is. Must be settable by the orchestrator before any file can be read. |
 | Listener port | `PORT` | `3000` | none | Owned by the orchestrator. |
-| Configuration file path | `TUCANO_CONFIG_FILE` | *(unset — no file)* | none | Names the optional JSON configuration file. Leaving it unset is the documented "no file" case. |
-| Key file path | `TUCANO_CONFIG_KEY_FILE` | *(unset — no keys)* | low | Names the optional key ring file for decrypting AEAD-encrypted secrets in the configuration file. |
-| Advisory lock timeout | `TUCANO_LOCK_TIMEOUT_MS` | `5000` | none | Milliseconds a write waits for the shared volume's advisory lock before it is refused with the `503` `lock_timeout` answer. Must be a `u64`; an unparseable value stops startup, while an empty value keeps the default, exactly as an unset one does. |
-| Request body cap | `TUCANO_MAX_BODY_BYTES` | `52428800` (50 MiB) | none | Largest request body the router accepts, in bytes; an over-limit request is refused before its body is read. Environment-only like the lock timeout; a whole number greater than zero, anything else stops startup (#103). |
-| Request timeout | `TUCANO_REQUEST_TIMEOUT_MS` | `300000` (five minutes) | none | Wall clock a request may take before it is cut off with the `504` `request_timeout` answer; an explicit `0` disables the deadline for a deployment that means it. A whole number; anything else stops startup (#103). |
-| In-flight cap | `TUCANO_MAX_CONCURRENCY` | `128` | none | Requests allowed in flight before new ones are refused with the `503` `service_unavailable` answer and a `Retry-After`; the server refuses rather than queues. An explicit `0` removes the cap (#103). |
-| Log filter | `TUCANO_LOG` | `info` | none | The `tracing-subscriber` directive set the process subscriber is built from. An unset, empty or blank value keeps `info` — the request spans, the audit lines and the failures, without the per-connection noise `debug` adds. A directive set `tracing-subscriber` rejects stops startup rather than a request. |
-| Log format | `TUCANO_LOG_FORMAT` | `compact` | none | `compact` renders one human-readable line per event, coloured only when stdout is a terminal so a captured log never carries escape sequences; `json` renders one object per event, uncoloured, for a log collector. Any other value stops startup. |
+| Configuration file path | `TATU_CONFIG_FILE` | *(unset — no file)* | none | Names the optional JSON configuration file. Leaving it unset is the documented "no file" case. |
+| Key file path | `TATU_CONFIG_KEY_FILE` | *(unset — no keys)* | low | Names the optional key ring file for decrypting AEAD-encrypted secrets in the configuration file. |
+| Advisory lock timeout | `TATU_LOCK_TIMEOUT_MS` | `5000` | none | Milliseconds a write waits for the shared volume's advisory lock before it is refused with the `503` `lock_timeout` answer. Must be a `u64`; an unparseable value stops startup, while an empty value keeps the default, exactly as an unset one does. |
+| Request body cap | `TATU_MAX_BODY_BYTES` | `52428800` (50 MiB) | none | Largest request body the router accepts, in bytes; an over-limit request is refused before its body is read. Environment-only like the lock timeout; a whole number greater than zero, anything else stops startup (#103). |
+| Request timeout | `TATU_REQUEST_TIMEOUT_MS` | `300000` (five minutes) | none | Wall clock a request may take before it is cut off with the `504` `request_timeout` answer; an explicit `0` disables the deadline for a deployment that means it. A whole number; anything else stops startup (#103). |
+| In-flight cap | `TATU_MAX_CONCURRENCY` | `128` | none | Requests allowed in flight before new ones are refused with the `503` `service_unavailable` answer and a `Retry-After`; the server refuses rather than queues. An explicit `0` removes the cap (#103). |
+| Log filter | `TATU_LOG` | `info` | none | The `tracing-subscriber` directive set the process subscriber is built from. An unset, empty or blank value keeps `info` — the request spans, the audit lines and the failures, without the per-connection noise `debug` adds. A directive set `tracing-subscriber` rejects stops startup rather than a request. |
+| Log format | `TATU_LOG_FORMAT` | `compact` | none | `compact` renders one human-readable line per event, coloured only when stdout is a terminal so a captured log never carries escape sequences; `json` renders one object per event, uncoloured, for a log collector. Any other value stops startup. |
 
 ## File and environment settings
 
@@ -44,16 +44,16 @@ These settings may come from the environment, the configuration file, or the bui
 
 | Setting | Environment variable | File key | Default | Sensitivity | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Auth required | `TUCANO_AUTH_REQUIRED` | `auth_required` | `false` | none | `true`, `false`, `1`, `0`, `yes`, `no`, `on`, `off`. |
-| JWT signing secret | `TUCANO_JWT_SECRET` | `jwt_secret` | *(unset)* | **secret** | Inline HS256 signing key. At least 32 bytes required when auth is enabled. May be an AEAD-encrypted envelope in the file. |
-| JWT secret file | `TUCANO_JWT_SECRET_FILE` | `jwt_secret_file` | *(unset)* | path | Path to a file holding the signing secret. Cannot be set together with `jwt_secret`. |
-| Access token TTL | `TUCANO_ACCESS_TOKEN_TTL` | `access_token_ttl` | `15m` | none | Duration: bare seconds, or `s`, `m`, `h`, `d` suffix. Must be non-zero. |
-| Refresh token TTL | `TUCANO_REFRESH_TOKEN_TTL` | `refresh_token_ttl` | `14d` | none | Duration: same format as access token TTL. Must be non-zero. |
-| Bootstrap username | `TUCANO_BOOTSTRAP_USERNAME` | `bootstrap_username` | *(unset)* | low | Account created at startup when the store holds no accounts. Must be paired with the password. |
-| Bootstrap password | `TUCANO_BOOTSTRAP_PASSWORD` | `bootstrap_password` | *(unset)* | **secret** | Password for the bootstrap account. Must be paired with the username. May be an AEAD-encrypted envelope in the file. |
+| Auth required | `TATU_AUTH_REQUIRED` | `auth_required` | `false` | none | `true`, `false`, `1`, `0`, `yes`, `no`, `on`, `off`. |
+| JWT signing secret | `TATU_JWT_SECRET` | `jwt_secret` | *(unset)* | **secret** | Inline HS256 signing key. At least 32 bytes required when auth is enabled. May be an AEAD-encrypted envelope in the file. |
+| JWT secret file | `TATU_JWT_SECRET_FILE` | `jwt_secret_file` | *(unset)* | path | Path to a file holding the signing secret. Cannot be set together with `jwt_secret`. |
+| Access token TTL | `TATU_ACCESS_TOKEN_TTL` | `access_token_ttl` | `15m` | none | Duration: bare seconds, or `s`, `m`, `h`, `d` suffix. Must be non-zero. |
+| Refresh token TTL | `TATU_REFRESH_TOKEN_TTL` | `refresh_token_ttl` | `14d` | none | Duration: same format as access token TTL. Must be non-zero. |
+| Bootstrap username | `TATU_BOOTSTRAP_USERNAME` | `bootstrap_username` | *(unset)* | low | Account created at startup when the store holds no accounts. Must be paired with the password. |
+| Bootstrap password | `TATU_BOOTSTRAP_PASSWORD` | `bootstrap_password` | *(unset)* | **secret** | Password for the bootstrap account. Must be paired with the username. May be an AEAD-encrypted envelope in the file. |
 
 Defaults here are the **service's** built-in defaults. The shipped `docker-compose.yml` overrides
-one of them — it sets `TUCANO_AUTH_REQUIRED=true` and reads the signing secret and bootstrap pair
+one of them — it sets `TATU_AUTH_REQUIRED=true` and reads the signing secret and bootstrap pair
 from `.env` — so the local Compose stack is authenticated while the service itself still starts
 anonymous when the variable is unset.
 
@@ -110,7 +110,7 @@ of a plain string. The envelope is a JSON object:
 }
 ```
 
-The key ring is a separate JSON file named by `TUCANO_CONFIG_KEY_FILE`:
+The key ring is a separate JSON file named by `TATU_CONFIG_KEY_FILE`:
 
 ```json
 {

@@ -1,10 +1,10 @@
 # Storage Backends
 
-Issue: [#186](https://github.com/TucanoTechnology/TucanoTestAPI/issues/186), child of epic
-[#167](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167). The decision this document
+Issue: [#186](https://github.com/TatuHQ/TatuTestAPI/issues/186), child of epic
+[#167](https://github.com/TatuHQ/TatuTestAPI/issues/167). The decision this document
 records and explains is
 [`docs/architecture/adr-object-storage.md`](adr-object-storage.md)
-(issue [#181](https://github.com/TucanoTechnology/TucanoTestAPI/issues/181), **Accepted**).
+(issue [#181](https://github.com/TatuHQ/TatuTestAPI/issues/181), **Accepted**).
 
 This is a reference page: it states which storage backend the service has and what that choice
 implies for backups, scaling, and rollback. It adds no route, no field, and no stored-document
@@ -14,10 +14,10 @@ bug.
 ## There is exactly one backend, and the ADR declined to add a second
 
 **The service has one persistence backend: the filesystem.** Folders and JSON documents under
-`TUCANO_DATA_DIR`, atomic same-directory rename, and a process-exclusive advisory lock file. Nothing
+`TATU_DATA_DIR`, atomic same-directory rename, and a process-exclusive advisory lock file. Nothing
 else is implemented, and nothing else is planned.
 
-That is a decision, not an accident of scheduling. Epic [#167](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167)
+That is a decision, not an accident of scheduling. Epic [#167](https://github.com/TatuHQ/TatuTestAPI/issues/167)
 proposed an S3-compatible object store as an alternative backend and was **declined** by the ADR
 above. The question the epic asked — "may a deployment keep its data in object storage?" — has been
 answered **no**, on the grounds that the properties object storage cannot provide (atomic
@@ -28,7 +28,7 @@ coding children are cancelled, not rescheduled.
 Two consequences follow, and they are the reason this page exists:
 
 - **Backend selection is not a thing you configure.** There is no backend key in the configuration
-  file and no environment variable that switches the store. `TUCANO_DATA_DIR` names *where* the
+  file and no environment variable that switches the store. `TATU_DATA_DIR` names *where* the
   filesystem backend is rooted; it does not choose a backend.
 - **A deployment that offers only object storage and no shared POSIX volume cannot run this
   service.** That is a genuine, accepted limitation rather than a gap to be worked around. The
@@ -55,8 +55,8 @@ change would cost, and so the mirror discussion below has something concrete to 
 
 | Property | Mechanism | What depends on it |
 | --- | --- | --- |
-| **Atomic publish** | A same-directory temporary file (`.tucano-<suffix>.tmp`), flushed and synced, then renamed over the destination. A reader sees the old document or the new one, never a partial write. | Every write. Also why a backup can be taken from a running service without quiescing it (see below). |
-| **Cross-process mutual exclusion** | One exclusive advisory lock on `<data>/.tucano.lock`, taken by every mutating path — write, delete, place, attachment save/delete, revision snapshot. Reads do not take it. | Multi-replica correctness, and the attachment-plus-metadata update that must never diverge. |
+| **Atomic publish** | A same-directory temporary file (`.tatu-<suffix>.tmp`), flushed and synced, then renamed over the destination. A reader sees the old document or the new one, never a partial write. | Every write. Also why a backup can be taken from a running service without quiescing it (see below). |
+| **Cross-process mutual exclusion** | One exclusive advisory lock on `<data>/.tatu.lock`, taken by every mutating path — write, delete, place, attachment save/delete, revision snapshot. Reads do not take it. | Multi-replica correctness, and the attachment-plus-metadata update that must never diverge. |
 | **Membership is the folder tree** | A project's suites are the folders inside it; a suite's cases likewise. Listing is a directory read. | The parent-scoped routes and the "one real home" rule in the storage concept. |
 | **Cascade delete** | Deleting a project or suite removes its whole subtree, including attachments and revision snapshots. | The delete semantics the compatibility contract describes. |
 | **Path confinement** | Every user-supplied identifier and filename is validated, and the constructed path is checked so a symlink or `..` cannot escape the data root. | The storage security invariants. |
@@ -83,7 +83,7 @@ copy-pasteable commands and the restore-side cautions, is
 [Backup and restore](../wiki/operations-and-troubleshooting.md) in the operations guide. Two points
 from it belong in this page's scope:
 
-- **Restore means mounting a copy of the directory at `TUCANO_DATA_DIR`.** There is no import step
+- **Restore means mounting a copy of the directory at `TATU_DATA_DIR`.** There is no import step
   and no format to convert.
 - **A restored archive supersedes; it does not merge.** Any run or result recorded after the backup
   is gone, not reconciled, because a run is a point-in-time record the API will not reconstruct
@@ -136,7 +136,7 @@ object store. No S3 client exists in the codebase, the `Repository` trait keeps 
 implementation and stays an internal seam rather than a pluggable plugin surface, and the ticket
 that would have extracted a backend-agnostic boundary was cancelled along with the rest of the epic.
 A consequence an operator will meet directly: a platform that offers object storage but no shared
-POSIX volume cannot host a multi-replica Tucano Test.
+POSIX volume cannot host a multi-replica TatuTest.
 
 **Permitted — an S3-compatible bucket as an out-of-process mirror or backup of the volume.** A copy
 of the tree may be produced to a bucket by tooling *outside* the API. Because the service never
@@ -161,8 +161,8 @@ Three rules bind that permission, and none of them are optional:
 Documenting a procedure nothing implements would be a guarantee the project cannot back. The
 concrete recipe — which copy mechanism to use, how to keep it consistent, and the restore drill that
 proves an archive is usable — is tracked as its own task, issue
-[#246](https://github.com/TucanoTechnology/TucanoTestAPI/issues/246), a child of epic
-[#167](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167), so it can be written and
+[#246](https://github.com/TatuHQ/TatuTestAPI/issues/246), a child of epic
+[#167](https://github.com/TatuHQ/TatuTestAPI/issues/167), so it can be written and
 verified against a real implementation rather than asserted in advance. Until that lands, the
 supported and verified way to move a copy off the host is the directory-copy procedure in
 [Backup and restore](../wiki/operations-and-troubleshooting.md), which needs no extra tooling and no
@@ -195,9 +195,9 @@ while coding, which is precisely why the epic was blocked on the decision rather
 
 - [ADR: Object Storage versus the File-Based Invariant](adr-object-storage.md) — the decision of
   record, its Options A–D, and the exact relaxations a reversal would require
-- [Epic #167 — Add an object-storage (S3) backend for the data volume](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167)
-- [Issue #186 — this document](https://github.com/TucanoTechnology/TucanoTestAPI/issues/186)
-- [Issue #246 — the off-box mirror/backup runbook](https://github.com/TucanoTechnology/TucanoTestAPI/issues/246)
+- [Epic #167 — Add an object-storage (S3) backend for the data volume](https://github.com/TatuHQ/TatuTestAPI/issues/167)
+- [Issue #186 — this document](https://github.com/TatuHQ/TatuTestAPI/issues/186)
+- [Issue #246 — the off-box mirror/backup runbook](https://github.com/TatuHQ/TatuTestAPI/issues/246)
   — the spin-out task for the recipe this page deliberately does not publish
 - [`AGENTS.md`](../../AGENTS.md) — Core Project Philosophy, Docker & Deployment, Storage Security
 - [`README.md`](../../README.md) — Storage concept, Scaling

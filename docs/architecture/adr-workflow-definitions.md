@@ -2,13 +2,13 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-01
-- **Issue:** [#463](https://github.com/TucanoTechnology/TucanoTestAPI/issues/463) (gating TucanoTestGUI[#101](https://github.com/TucanoTechnology/TucanoTestGUI/issues/101))
+- **Issue:** [#463](https://github.com/TatuHQ/TatuTestAPI/issues/463) (gating TatuTestGUI[#101](https://github.com/TatuHQ/TatuTestGUI/issues/101))
 - **Deciders:** repository owner (ECiurleo)
 - **Supersedes:** nothing
 
 ## Context
 
-The GUI's Phase 4 epic item is a canvas for building test flows (TucanoTestGUI#101), and the data model
+The GUI's Phase 4 epic item is a canvas for building test flows (TatuTestGUI#101), and the data model
 has no object for it. Today:
 
 - a **run** freezes a selection of suites and cases at creation — embedded document snapshots and
@@ -32,7 +32,7 @@ it.
   resources live under `projects/<p>/<collection>/<id>.json` — the placement milestones,
   configurations and (project-held) cases already use.
 - **Reads are global, writes may be parent-scoped** — the addressing convention that
-  [#462](https://github.com/TucanoTechnology/TucanoTestAPI/issues/462) just completed for cases.
+  [#462](https://github.com/TatuHQ/TatuTestAPI/issues/462) just completed for cases.
 - **Runs are immutable snapshots** — a run must never reach back into a workflow after materialising.
 
 ## Decision
@@ -185,5 +185,5 @@ ticket.
   the `sourceWorkflowId` field follows
 - [`../testing/seed-dataset-spec.md`](../testing/seed-dataset-spec.md) — single-home identifiers and
   the row the build ticket adds
-- [#462](https://github.com/TucanoTechnology/TucanoTestAPI/issues/462) — the parent-scoped doors
+- [#462](https://github.com/TatuHQ/TatuTestAPI/issues/462) — the parent-scoped doors
   convention this surface continues

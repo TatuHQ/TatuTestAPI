@@ -1,6 +1,6 @@
 # Operations and troubleshooting
 
-This page is for whoever runs Tucano Test: what has to be persistent, how to scale it, how to take a
+This page is for whoever runs TatuTest: what has to be persistent, how to scale it, how to take a
 backup and put it back, what the health endpoints actually answer, how to roll back a release, and
 what to do when something has already gone wrong.
 
@@ -10,14 +10,14 @@ the records win and this page is a bug — the sources are named at the bottom.
 
 ## The data directory is the only state
 
-Everything the service persists lives under one directory, `TUCANO_DATA_DIR` (`/data` in the
+Everything the service persists lives under one directory, `TATU_DATA_DIR` (`/data` in the
 container). There is no database, no cache and no session store: a container holds nothing that must
 survive a restart, and deleting a container never deletes data — deleting the directory does.
 
 | Path | What it is |
 | --- | --- |
 | `./data` on the host | The persistent state, created by Compose on first run |
-| `/data` in the container | The same directory, named by `TUCANO_DATA_DIR` |
+| `/data` in the container | The same directory, named by `TATU_DATA_DIR` |
 
 Because the contents are ordinary JSON and folders, you can read, `grep`, snapshot and archive them
 with the tools you already have — the API never needs to be involved in a backup. What you must not
@@ -27,7 +27,7 @@ you need to change stored data, change it through the API.
 The tree, in one view:
 
 ```text
-TUCANO_DATA_DIR/
+TATU_DATA_DIR/
 ├── projects/<project>/project.json     suites, cases and their attachments
 │   ├── test_runs/<id>.json             runs live inside the project that governs them
 │   ├── milestones/<id>.json
@@ -119,7 +119,7 @@ healthy replica does not block a second one from starting.
 
 ## Scaling out
 
-A second replica is the same image, the same environment, and the same `TUCANO_DATA_DIR`. Replicas
+A second replica is the same image, the same environment, and the same `TATU_DATA_DIR`. Replicas
 share no in-memory state, so adding one needs no coordination — but it needs shared storage:
 
 - **Single node.** A local Docker volume or a host bind mount (`./data`) is fine, and more than one
@@ -141,7 +141,7 @@ Stopping is graceful: `docker stop` (or a compose down) sends SIGTERM, the servi
 requests it is actively working — including a write parked on the volume's advisory lock — closes
 idle connections, and exits on its own. The escalation to SIGKILL only arrives when the grace
 period runs out, so keep it above the worst thing a drain waits for: the lock deadline
-(`TUCANO_LOCK_TIMEOUT_MS`, default 5 s) plus the work queued behind it. The shipped Compose file
+(`TATU_LOCK_TIMEOUT_MS`, default 5 s) plus the work queued behind it. The shipped Compose file
 carries `stop_grace_period: 30s` for exactly that (#411). A drained request's write reaches disk
 and its client still gets its answer; a SIGKILLed one relies on the atomic-publish rule — the old
 document or the complete new one, never a half one — so prefer the graceful path and size the
@@ -154,14 +154,14 @@ writes by atomic rename, so take the copy while the service is stopped, or accep
 written during the copy may be captured mid-rename:
 
 ```sh
-DATA_DIR=/srv/tucano/data                                  # the directory the replica mounts at /data
-tar -C "$DATA_DIR" -czf "tucano-data-$(date +%Y%m%d-%H%M%S).tgz" .
+DATA_DIR=/srv/tatu/data                                  # the directory the replica mounts at /data
+tar -C "$DATA_DIR" -czf "tatu-data-$(date +%Y%m%d-%H%M%S).tgz" .
 ```
 
 With Compose, the same archive from the host side:
 
 ```sh
-tar -C ./data -czf "tucano-data-$(date +%Y%m%d-%H%M%S).tgz" .
+tar -C ./data -czf "tatu-data-$(date +%Y%m%d-%H%M%S).tgz" .
 ```
 
 Restore is the reverse, into an empty directory, with the service stopped:
@@ -169,7 +169,7 @@ Restore is the reverse, into an empty directory, with the service stopped:
 ```sh
 docker compose down
 rm -rf ./data && mkdir -p ./data
-tar -C ./data -xzf tucano-data-20260916-020000.tgz
+tar -C ./data -xzf tatu-data-20260916-020000.tgz
 docker compose up -d
 ```
 
@@ -178,7 +178,7 @@ Then confirm the service is serving *and* can write before declaring the restore
 
 ```sh
 curl -s http://localhost:3100/ready
-SMOKE_USERNAME=admin SMOKE_PASSWORD='<the TUCANO_BOOTSTRAP_PASSWORD from .env>' \
+SMOKE_USERNAME=admin SMOKE_PASSWORD='<the TATU_BOOTSTRAP_PASSWORD from .env>' \
   scripts/smoke.sh http://localhost:3100
 ```
 
@@ -208,8 +208,8 @@ directory and mounting that, exactly as the steps above do.
 The supported and verified way to move a copy off the host today is to produce the archive above and
 move *the archive*. The concrete recipe — which copy mechanism, how to keep it consistent, and the
 restore drill — is tracked as issue
-[#246](https://github.com/TucanoTechnology/TucanoTestAPI/issues/246) under epic
-[#167](https://github.com/TucanoTechnology/TucanoTestAPI/issues/167). The decision, the declined
+[#246](https://github.com/TatuHQ/TatuTestAPI/issues/246) under epic
+[#167](https://github.com/TatuHQ/TatuTestAPI/issues/167). The decision, the declined
 backend, and the terms of the mirror permission are in
 [Storage backends](../architecture/storage-backends.md) and
 [the ADR](../architecture/adr-object-storage.md).
@@ -218,23 +218,23 @@ backend, and the terms of the mirror permission are in
 
 Rollback means redeploying a previously recorded **immutable** tag — never moving a tag, never
 rebuilding from a branch. After the container is back up, its first log line confirms it: the
-`tucano.boot` event names the build the running process was compiled as (`build=`), and it must
+`tatu.boot` event names the build the running process was compiled as (`build=`), and it must
 match the tag you rolled back to before any traffic returns (#418). Record what is serving before
 you change anything:
 
 ```sh
-IMAGE="ghcr.io/tucanotechnology/tucanotestapi"
+IMAGE="ghcr.io/tatuhq/tatutestapi"
 PREVIOUS="$IMAGE:build-4700"    # the tag currently deployed, or a vMAJOR.MINOR.PATCH release
 CANDIDATE="$IMAGE:build-4711"   # the tag under test
 ```
 
-Then point the deployment back at `$PREVIOUS` against the **same** `TUCANO_DATA_DIR`, and confirm
+Then point the deployment back at `$PREVIOUS` against the **same** `TATU_DATA_DIR`, and confirm
 `/health`, `/ready` and `scripts/smoke.sh` before declaring recovery. The validated promotion and
 rollback procedure, including the canary replica that gates a promotion, is
 [docs/deployment/canary-validation-and-rollback.md](../deployment/canary-validation-and-rollback.md).
 
 The shipped `docker-compose.yml` is the exception to "an immutable tag": it composes
-`image: tucano-test-api:local` with `build: .`, so that name is a build output and `--build` retags
+`image: tatu-test-api:local` with `build: .`, so that name is a build output and `--build` retags
 it. There the rollback target is the running container's image **id**, recorded and pinned under a
 rollback-only tag *before* the candidate is built, and the Compose rollback recreates the service
 from it with `--no-build`. The executable sequence is in the
@@ -264,7 +264,7 @@ Every rejection the application raises has the same envelope, so the `code` is w
 ### Compose refuses to start: a required variable is missing a value
 
 Symptom: `docker compose up -d` prints a `error while interpolating services.api.environment.…`
-line naming `TUCANO_JWT_SECRET` or `TUCANO_BOOTSTRAP_PASSWORD`, and no container is created — this
+line naming `TATU_JWT_SECRET` or `TATU_BOOTSTRAP_PASSWORD`, and no container is created — this
 happens before the service is reached.
 
 Cause: the shipped `docker-compose.yml` turns authentication on and declares both values required,
@@ -273,12 +273,12 @@ from the committed template and set them.
 
 ```sh
 cp .env.example .env
-# set TUCANO_JWT_SECRET (at least 32 bytes) and TUCANO_BOOTSTRAP_PASSWORD
+# set TATU_JWT_SECRET (at least 32 bytes) and TATU_BOOTSTRAP_PASSWORD
 docker compose up -d --build
 ```
 
 `docker compose config --quiet` validates the result without printing the secrets. Deliberately
-unauthenticated runs set `TUCANO_AUTH_REQUIRED=false` in `.env` — only on a machine nothing else can
+unauthenticated runs set `TATU_AUTH_REQUIRED=false` in `.env` — only on a machine nothing else can
 reach, see the [installation page](getting-started.md#authentication-is-on-by-default).
 
 ### The container exits immediately and the log says the data directory is unusable
@@ -315,7 +315,7 @@ project-scoped (`viewer`, `editor`, `owner`, plus a `systemAdmin` account that r
 and a caller reaches only the projects it was granted — listings are filtered down rather than
 refused.
 
-There is **no grant-administration route yet**: grants live under `$TUCANO_DATA_DIR/auth/`, so check
+There is **no grant-administration route yet**: grants live under `$TATU_DATA_DIR/auth/`, so check
 there and provision out of band. See the
 [Authentication section of the README](../../README.md#authentication) and
 [docs/security/authentication-decision.md](../security/authentication-decision.md).
@@ -376,7 +376,7 @@ Every push to `main` publishes `build-<GitHub run number>`; a SemVer release add
 exist by design. Ask the registry rather than the UI:
 
 ```sh
-docker manifest inspect ghcr.io/tucanotechnology/tucanotestapi:build-4711 > /dev/null && echo present
+docker manifest inspect ghcr.io/tatuhq/tatutestapi:build-4711 > /dev/null && echo present
 ```
 
 If the workflow ran but the image is missing, read its log: the publish step logs in to GHCR with
@@ -395,7 +395,7 @@ container does not re-download every crate).
 ### A page in this wiki contradicts the running service
 
 That is a documentation defect, not a configuration problem — please
-[open an issue](https://github.com/TucanoTechnology/TucanoTestAPI/issues). Every page names the
+[open an issue](https://github.com/TatuHQ/TatuTestAPI/issues). Every page names the
 engineering records it derives from, and `openapi.json` is normative for the HTTP contract:
 
 ```sh

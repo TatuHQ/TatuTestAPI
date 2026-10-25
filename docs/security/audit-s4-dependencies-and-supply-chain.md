@@ -1,12 +1,12 @@
 # Security Audit S4 — Dependencies and Supply Chain (Issue #179)
 
-Issue: [#179](https://github.com/TucanoTechnology/TucanoTestAPI/issues/179). Parent epic:
-[#166](https://github.com/TucanoTechnology/TucanoTestAPI/issues/166) — *Carry out security audit*.
+Issue: [#179](https://github.com/TatuHQ/TatuTestAPI/issues/179). Parent epic:
+[#166](https://github.com/TatuHQ/TatuTestAPI/issues/166) — *Carry out security audit*.
 
 This report runs surface **S4** of [audit-scope.md](audit-scope.md): *"The dependency inventory and
 its advisories, the CI supply-chain controls, action and image pinning, the SBOM, and the workflow
 permissions model."* It carries findings only; nothing here is fixed. Remediation belongs to the
-tickets [#180](https://github.com/TucanoTechnology/TucanoTestAPI/issues/180) raises.
+tickets [#180](https://github.com/TatuHQ/TatuTestAPI/issues/180) raises.
 
 - **Affected revision (the pinned target):** `61b02b92f9227190ded969a66f071f1ce4a8c3e0`
 - **Method:** [audit-scope.md § 6](audit-scope.md#6-how-the-audit-tasks-run), steps 1–7.
@@ -26,15 +26,15 @@ tickets [#180](https://github.com/TucanoTechnology/TucanoTestAPI/issues/180) rai
 ## 2. Throwaway target (step 2)
 
 Two of its own Compose projects, each with its own volume and its own free host port, both built
-from the pinned revision. The operator's long-lived instance (Compose project `tucano-test`,
-container `tucano-test-api-1`) was never a target and was not stopped or rebuilt.
+from the pinned revision. The operator's long-lived instance (Compose project `tatu-test`,
+container `tatu-test-api-1`) was never a target and was not stopped or rebuilt.
 
-| Arm | Compose project | Host port | `TUCANO_AUTH_REQUIRED` | Result |
+| Arm | Compose project | Host port | `TATU_AUTH_REQUIRED` | Result |
 | --- | --- | --- | --- | --- |
 | Auth off | `audit-s4` | 3210 | `false` | `/health` → `{"status":"ok","storage":"filesystem"}`; `scripts/smoke.sh http://localhost:3210` → **PASS** (health, scratch project/case CRUD, both deletions observed) |
 | Auth on | `audit-s4-kauth` | 3211 | `true` | `GET /health` → `200`; `GET /projects` → `401 {"code":"missing_token"}`; `POST /auth/login` → `200` with an access token, so the bootstrap account exists and the enforcing arm is reachable |
 
-Both images are the local build of the pinned revision (`Config.User=tucano`,
+Both images are the local build of the pinned revision (`Config.User=tatu`,
 `org.opencontainers.image.version=local`, image id
 `sha256:247a6b40e98499454a6473da908f3ee8a76ac4ae367ec603401f04b7e1fe50ef`). Both containers ran
 with `ReadonlyRootfs=true`, `no-new-privileges:true`, and `/tmp` as a tmpfs.
@@ -93,7 +93,7 @@ The 14 call sites, in full, so the class is closed rather than sampled:
 | `release.yml` | `contents: read`, `packages: write` | `push` to `main` and `v*.*.*` tags |
 | `auto-merge.yml` | `contents: write`, `pull-requests: write`, `checks: read` | `workflow_run` on Lint/Docs/Build and Test/Security completion |
 
-`release.yml` publishes to `ghcr.io/${{ github.repository }}` (`ghcr.io/tucanotechnology/tucanotestapi`)
+`release.yml` publishes to `ghcr.io/${{ github.repository }}` (`ghcr.io/tatuhq/tatutestapi`)
 with `docker/build-push-action@v6`, `push: true`, `tags` from `docker/metadata-action@v5`
 (`type=ref,event=tag` and `type=raw,value=build-${{ github.run_number }}`), and passes
 `build-args: BUILD_NUMBER=${{ github.run_number }}`. It passes no `provenance:`, `sbom:`,
@@ -132,7 +132,7 @@ further on its own.
   FROM rust:1.98.0-slim-trixie AS builder
   FROM debian:trixie-slim@sha256:abc9cb88a5587630d7f915f47b23b0668fe250fbfc6457aa4d52b534c1bbf73f
 
-  $ docker build --file Dockerfile --tag tucano-test:PIN-CHECK .
+  $ docker build --file Dockerfile --tag tatu-test:PIN-CHECK .
   $ docker image inspect rust:1.98.0-slim-trixie --format '{{.Id}}'
   ```
 
@@ -164,7 +164,7 @@ further on its own.
   since it can alter the artifact without altering any pinned crate. The image the operator deploys
   is then not the image the recorded revision produced, which defeats the rollback identity the
   deployment guide promises. Who is affected: anyone deploying this image. Deployment configuration:
-  independent of `TUCANO_AUTH_REQUIRED`; auth on or off makes no difference, because the compromise
+  independent of `TATU_AUTH_REQUIRED`; auth on or off makes no difference, because the compromise
   happens before the service exists. The precondition is that the attacker already controls the
   `rust` tag on Docker Hub, which is the difficulty that keeps this out of higher severity.
 - **Suggested fix:** pin `rust:1.98.0-slim-trixie` by digest, the same way the runtime stage is
@@ -216,7 +216,7 @@ further on its own.
   attacker must first control a tag in a well-known action repository, and because the jobs that
   carry the most authority (`release.yml`: `packages: write`; `auto-merge.yml`: `contents: write`)
   are separately constrained — see F-179-3 — so defeating an action pin alone grants nothing further.
-  Deployment configuration: independent of `TUCANO_AUTH_REQUIRED`.
+  Deployment configuration: independent of `TATU_AUTH_REQUIRED`.
 - **Suggested fix:** pin each `uses:` to a full commit SHA with the tag retained as a trailing
   comment, and pin the workflow images by digest; adopt a scheduled bump so pins do not rot.
   `docs/architecture/rust-service-core.md` already lists `cargo-deny` policy checks as outstanding,
@@ -280,7 +280,7 @@ further on its own.
 ### F-179-4: Reconcile the dependency-pinning claim with `Cargo.toml`
 
 > **Resolved after the audited revision (note added post-audit; the finding text below
-> describes `61b02b9` and nothing has been edited away).** [#335](https://github.com/TucanoTechnology/TucanoTestAPI/issues/335)
+> describes `61b02b9` and nothing has been edited away).** [#335](https://github.com/TatuHQ/TatuTestAPI/issues/335)
 > narrowed the `scanning-policy.md` claim to what the manifest actually does — exact versions
 > where `Cargo.toml` says so, the committed `Cargo.lock` enforcing the rest — so the quoted
 > sentence (*“All dependencies are pinned to specific versions in `Cargo.toml`”*) no longer
@@ -435,11 +435,11 @@ Controls the audit tested and could not break. Each entry names the test that pr
 - **`scripts/clear-data.mjs`** — the Info-level calibration recorded in
   [audit-scope.md](audit-scope.md) § 5 and left to "**#179** or #178 to confirm against the code".
   Confirmed against the code at the pinned revision: the script's `resolveBaseUrl()` probes a fixed
-  candidate list in order — `argv[2]`, `API_URL`, `TUCANO_API_URL`, `http://localhost:3100`,
+  candidate list in order — `argv[2]`, `API_URL`, `TATU_API_URL`, `http://localhost:3100`,
   `http://localhost:8080/api`, `http://localhost:3000` — and falls back to the first candidate when
   none answers `/health`; `api()` sends no `Authorization` header; it never touches configurations,
   accounts, or grants. The calibration's stated consequence therefore holds: against an installation
-  with `TUCANO_AUTH_REQUIRED` on it cannot complete its deletions, and on auth off it can delete
+  with `TATU_AUTH_REQUIRED` on it cannot complete its deletions, and on auth off it can delete
   every milestone, run, suite, project, and case the fallback URL answers for. Recorded as
   calibration confirmed, **not** raised as a new finding.
 
@@ -448,8 +448,8 @@ Controls the audit tested and could not break. Each entry names the test that pr
 Both throwaway Compose projects and both volumes were removed at the end of the audit
 (`docker compose -p audit-s4 down -v` and `docker compose -p audit-s4-kauth down -v`), together with
 the two local images built for it (`sha256:247a6b40…` and `sha256:b1d957a2…`) and the scratch
-directory that held their volumes. The operator's long-lived Compose project `tucano-test` and its
-container `tucano-test-api-1` were never a target, were never stopped, and were never rebuilt; it
+directory that held their volumes. The operator's long-lived Compose project `tatu-test` and its
+container `tatu-test-api-1` were never a target, were never stopped, and were never rebuilt; it
 reported `Up` before, during, and after the audit.
 
 One detail worth recording for whoever runs the next audit, because it cost this one a debugging

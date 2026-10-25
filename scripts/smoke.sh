@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Scratch-CRUD smoke check for a running Tucano Test API (issue #96).
+# Scratch-CRUD smoke check for a running TatuTest API (issue #96).
 #
 # Usage:
 #   scripts/smoke.sh [BASE_URL]
@@ -17,7 +17,7 @@
 # candidate is never left holding scratch data.
 #
 # Authentication (issue #195): on a deployment running with
-# TUCANO_AUTH_REQUIRED=true every call below needs a caller, and creating a
+# TATU_AUTH_REQUIRED=true every call below needs a caller, and creating a
 # project needs a system administrator. Set SMOKE_USERNAME and SMOKE_PASSWORD
 # to the bootstrap account's credentials and the script signs in through
 # POST /auth/login and presents the access token on every request. Set

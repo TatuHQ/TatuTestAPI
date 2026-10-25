@@ -26,10 +26,10 @@ use crate::config::secret::SecretValue;
 /// operator error the operator can act on.
 pub const MIN_SECRET_BYTES: usize = 32;
 
-/// Access-token lifetime when `TUCANO_ACCESS_TOKEN_TTL` is unset.
+/// Access-token lifetime when `TATU_ACCESS_TOKEN_TTL` is unset.
 pub const DEFAULT_ACCESS_TTL: Duration = Duration::from_secs(15 * 60);
 
-/// Refresh-token lifetime when `TUCANO_REFRESH_TOKEN_TTL` is unset.
+/// Refresh-token lifetime when `TATU_REFRESH_TOKEN_TTL` is unset.
 pub const DEFAULT_REFRESH_TTL: Duration = Duration::from_secs(14 * 24 * 60 * 60);
 
 /// The auth settings resolved from the environment.
@@ -110,13 +110,13 @@ impl AuthConfig {
         let file_lookup = |key: &str| -> Option<String> {
             let file = file?;
             match key {
-                "TUCANO_AUTH_REQUIRED" => file.auth_required.map(|flag| flag.to_string()),
-                "TUCANO_JWT_SECRET" => file.jwt_secret.as_ref().and_then(as_plain),
-                "TUCANO_JWT_SECRET_FILE" => file.jwt_secret_file.clone(),
-                "TUCANO_ACCESS_TOKEN_TTL" => file.access_token_ttl.clone(),
-                "TUCANO_REFRESH_TOKEN_TTL" => file.refresh_token_ttl.clone(),
-                "TUCANO_BOOTSTRAP_USERNAME" => file.bootstrap_username.clone(),
-                "TUCANO_BOOTSTRAP_PASSWORD" => file.bootstrap_password.as_ref().and_then(as_plain),
+                "TATU_AUTH_REQUIRED" => file.auth_required.map(|flag| flag.to_string()),
+                "TATU_JWT_SECRET" => file.jwt_secret.as_ref().and_then(as_plain),
+                "TATU_JWT_SECRET_FILE" => file.jwt_secret_file.clone(),
+                "TATU_ACCESS_TOKEN_TTL" => file.access_token_ttl.clone(),
+                "TATU_REFRESH_TOKEN_TTL" => file.refresh_token_ttl.clone(),
+                "TATU_BOOTSTRAP_USERNAME" => file.bootstrap_username.clone(),
+                "TATU_BOOTSTRAP_PASSWORD" => file.bootstrap_password.as_ref().and_then(as_plain),
                 _ => None,
             }
         };
@@ -128,23 +128,20 @@ impl AuthConfig {
     /// The body of the resolver: one lookup, already layered, read in the
     /// documented order — the flag, then the lifetimes, then the secret.
     fn from_single_lookup(lookup: impl Fn(&str) -> Option<String>) -> Result<Self, ConfigError> {
-        let required = match lookup("TUCANO_AUTH_REQUIRED") {
+        let required = match lookup("TATU_AUTH_REQUIRED") {
             Some(raw) => parse_bool(&raw)?,
             None => false,
         };
-        let access_ttl = match lookup("TUCANO_ACCESS_TOKEN_TTL") {
-            Some(raw) => parse_duration(&raw, "TUCANO_ACCESS_TOKEN_TTL")?,
+        let access_ttl = match lookup("TATU_ACCESS_TOKEN_TTL") {
+            Some(raw) => parse_duration(&raw, "TATU_ACCESS_TOKEN_TTL")?,
             None => DEFAULT_ACCESS_TTL,
         };
-        let refresh_ttl = match lookup("TUCANO_REFRESH_TOKEN_TTL") {
-            Some(raw) => parse_duration(&raw, "TUCANO_REFRESH_TOKEN_TTL")?,
+        let refresh_ttl = match lookup("TATU_REFRESH_TOKEN_TTL") {
+            Some(raw) => parse_duration(&raw, "TATU_REFRESH_TOKEN_TTL")?,
             None => DEFAULT_REFRESH_TTL,
         };
 
-        let jwt_secret = match (
-            lookup("TUCANO_JWT_SECRET"),
-            lookup("TUCANO_JWT_SECRET_FILE"),
-        ) {
+        let jwt_secret = match (lookup("TATU_JWT_SECRET"), lookup("TATU_JWT_SECRET_FILE")) {
             (Some(_), Some(_)) => return Err(ConfigError::SecretSourcesConflict),
             (Some(inline), None) => Some(inline.into_bytes()),
             (None, Some(path)) => Some(read_secret_file(&path)?),
@@ -161,8 +158,8 @@ impl AuthConfig {
             None => {}
         }
 
-        let bootstrap_username = lookup("TUCANO_BOOTSTRAP_USERNAME");
-        let bootstrap_password = lookup("TUCANO_BOOTSTRAP_PASSWORD");
+        let bootstrap_username = lookup("TATU_BOOTSTRAP_USERNAME");
+        let bootstrap_password = lookup("TATU_BOOTSTRAP_PASSWORD");
         if bootstrap_username.is_some() != bootstrap_password.is_some() {
             return Err(ConfigError::IncompleteBootstrap);
         }
@@ -181,7 +178,7 @@ impl AuthConfig {
 /// A setting the server cannot start with.
 #[derive(Debug)]
 pub enum ConfigError {
-    /// `TUCANO_AUTH_REQUIRED` is not a value the server understands.
+    /// `TATU_AUTH_REQUIRED` is not a value the server understands.
     InvalidBool {
         /// The refused value, quoted; it is what the operator typed.
         value: String,
@@ -193,7 +190,7 @@ pub enum ConfigError {
         /// The refused value, quoted; never a secret's content.
         value: String,
     },
-    /// Both `TUCANO_JWT_SECRET` and `TUCANO_JWT_SECRET_FILE` were set.
+    /// Both `TATU_JWT_SECRET` and `TATU_JWT_SECRET_FILE` were set.
     SecretSourcesConflict,
     /// Auth is required but no signing secret was configured.
     MissingSecret,
@@ -218,18 +215,18 @@ impl Display for ConfigError {
         match self {
             Self::InvalidBool { value } => write!(
                 formatter,
-                "TUCANO_AUTH_REQUIRED must be true or false, not {value:?}"
+                "TATU_AUTH_REQUIRED must be true or false, not {value:?}"
             ),
             Self::InvalidTtl { key, value } => {
                 write!(formatter, "{key} is not a duration: {value:?}")
             }
             Self::SecretSourcesConflict => write!(
                 formatter,
-                "set either TUCANO_JWT_SECRET or TUCANO_JWT_SECRET_FILE, not both"
+                "set either TATU_JWT_SECRET or TATU_JWT_SECRET_FILE, not both"
             ),
             Self::MissingSecret => write!(
                 formatter,
-                "TUCANO_AUTH_REQUIRED is set, so TUCANO_JWT_SECRET or TUCANO_JWT_SECRET_FILE must be too"
+                "TATU_AUTH_REQUIRED is set, so TATU_JWT_SECRET or TATU_JWT_SECRET_FILE must be too"
             ),
             Self::ShortSecret { length } => write!(
                 formatter,
@@ -238,12 +235,12 @@ impl Display for ConfigError {
             Self::SecretFile { path, source } => {
                 write!(
                     formatter,
-                    "cannot read TUCANO_JWT_SECRET_FILE {path:?}: {source}"
+                    "cannot read TATU_JWT_SECRET_FILE {path:?}: {source}"
                 )
             }
             Self::IncompleteBootstrap => write!(
                 formatter,
-                "set TUCANO_BOOTSTRAP_USERNAME and TUCANO_BOOTSTRAP_PASSWORD together"
+                "set TATU_BOOTSTRAP_USERNAME and TATU_BOOTSTRAP_PASSWORD together"
             ),
         }
     }
@@ -363,13 +360,13 @@ mod tests {
 
     #[test]
     fn requiring_auth_without_a_secret_refuses_to_start() {
-        let error = config(&[("TUCANO_AUTH_REQUIRED", "true")]).expect_err("no secret");
+        let error = config(&[("TATU_AUTH_REQUIRED", "true")]).expect_err("no secret");
         assert!(matches!(error, ConfigError::MissingSecret), "{error:?}");
     }
 
     #[test]
     fn a_secret_shorter_than_the_minimum_refuses_to_start() {
-        let error = config(&[("TUCANO_JWT_SECRET", "too-short")]).expect_err("short secret");
+        let error = config(&[("TATU_JWT_SECRET", "too-short")]).expect_err("short secret");
         match error {
             ConfigError::ShortSecret { length } => assert_eq!(length, "too-short".len()),
             other => panic!("expected a short-secret error, got {other:?}"),
@@ -378,15 +375,15 @@ mod tests {
 
     #[test]
     fn an_inline_secret_is_used_as_written() {
-        let config = config(&[("TUCANO_JWT_SECRET", SECRET_OK)]).expect("config");
+        let config = config(&[("TATU_JWT_SECRET", SECRET_OK)]).expect("config");
         assert_eq!(config.jwt_secret.as_deref(), Some(SECRET_OK.as_bytes()));
     }
 
     #[test]
     fn inline_and_file_secrets_cannot_both_be_set() {
         let error = config(&[
-            ("TUCANO_JWT_SECRET", SECRET_OK),
-            ("TUCANO_JWT_SECRET_FILE", "/tmp/never-read"),
+            ("TATU_JWT_SECRET", SECRET_OK),
+            ("TATU_JWT_SECRET_FILE", "/tmp/never-read"),
         ])
         .expect_err("both sources");
         assert!(
@@ -401,8 +398,8 @@ mod tests {
         let path = directory.path().join("jwt.secret");
         std::fs::write(&path, format!("{SECRET_OK}\n")).expect("write secret");
         let config = config(&[
-            ("TUCANO_AUTH_REQUIRED", "true"),
-            ("TUCANO_JWT_SECRET_FILE", path.to_str().expect("utf-8 path")),
+            ("TATU_AUTH_REQUIRED", "true"),
+            ("TATU_JWT_SECRET_FILE", path.to_str().expect("utf-8 path")),
         ])
         .expect("config");
         assert_eq!(config.jwt_secret.as_deref(), Some(SECRET_OK.as_bytes()));
@@ -411,8 +408,8 @@ mod tests {
 
     #[test]
     fn an_unreadable_secret_file_refuses_to_start() {
-        let error = config(&[("TUCANO_JWT_SECRET_FILE", "/definitely/not/here")])
-            .expect_err("missing file");
+        let error =
+            config(&[("TATU_JWT_SECRET_FILE", "/definitely/not/here")]).expect_err("missing file");
         assert!(matches!(error, ConfigError::SecretFile { .. }), "{error:?}");
     }
 
@@ -452,7 +449,7 @@ mod tests {
         ] {
             assert!(
                 matches!(
-                    parse_duration(raw, "TUCANO_ACCESS_TOKEN_TTL"),
+                    parse_duration(raw, "TATU_ACCESS_TOKEN_TTL"),
                     Err(ConfigError::InvalidTtl { .. })
                 ),
                 "{raw:?} should not parse"
@@ -463,9 +460,9 @@ mod tests {
     #[test]
     fn a_configured_access_lifetime_replaces_the_default() {
         let config = config(&[
-            ("TUCANO_JWT_SECRET", SECRET_OK),
-            ("TUCANO_ACCESS_TOKEN_TTL", "30m"),
-            ("TUCANO_REFRESH_TOKEN_TTL", "7d"),
+            ("TATU_JWT_SECRET", SECRET_OK),
+            ("TATU_ACCESS_TOKEN_TTL", "30m"),
+            ("TATU_REFRESH_TOKEN_TTL", "7d"),
         ])
         .expect("config");
         assert_eq!(config.access_ttl, Duration::from_secs(1_800));
@@ -485,11 +482,8 @@ mod tests {
             ("no", false),
             ("off", false),
         ] {
-            let config = config(&[
-                ("TUCANO_AUTH_REQUIRED", raw),
-                ("TUCANO_JWT_SECRET", SECRET_OK),
-            ])
-            .unwrap_or_else(|error| panic!("{raw:?} should parse: {error}"));
+            let config = config(&[("TATU_AUTH_REQUIRED", raw), ("TATU_JWT_SECRET", SECRET_OK)])
+                .unwrap_or_else(|error| panic!("{raw:?} should parse: {error}"));
             assert_eq!(config.required, expected, "{raw:?}");
         }
     }
@@ -497,8 +491,8 @@ mod tests {
     #[test]
     fn the_required_flag_rejects_anything_else() {
         let error = config(&[
-            ("TUCANO_AUTH_REQUIRED", "maybe"),
-            ("TUCANO_JWT_SECRET", SECRET_OK),
+            ("TATU_AUTH_REQUIRED", "maybe"),
+            ("TATU_JWT_SECRET", SECRET_OK),
         ])
         .expect_err("unrecognised flag");
         match error {
@@ -510,9 +504,9 @@ mod tests {
     #[test]
     fn bootstrap_credentials_are_accepted_as_a_pair() {
         let config = config(&[
-            ("TUCANO_JWT_SECRET", SECRET_OK),
-            ("TUCANO_BOOTSTRAP_USERNAME", "admin"),
-            ("TUCANO_BOOTSTRAP_PASSWORD", "hunter2"),
+            ("TATU_JWT_SECRET", SECRET_OK),
+            ("TATU_BOOTSTRAP_USERNAME", "admin"),
+            ("TATU_BOOTSTRAP_PASSWORD", "hunter2"),
         ])
         .expect("config");
         assert_eq!(config.bootstrap_username.as_deref(), Some("admin"));
@@ -522,10 +516,10 @@ mod tests {
     #[test]
     fn half_a_bootstrap_pair_refuses_to_start() {
         for lone in [
-            ("TUCANO_BOOTSTRAP_USERNAME", "admin"),
-            ("TUCANO_BOOTSTRAP_PASSWORD", "hunter2"),
+            ("TATU_BOOTSTRAP_USERNAME", "admin"),
+            ("TATU_BOOTSTRAP_PASSWORD", "hunter2"),
         ] {
-            let error = config(&[("TUCANO_JWT_SECRET", SECRET_OK), lone]).expect_err("half a pair");
+            let error = config(&[("TATU_JWT_SECRET", SECRET_OK), lone]).expect_err("half a pair");
             assert!(
                 matches!(error, ConfigError::IncompleteBootstrap),
                 "{lone:?}: {error:?}"
@@ -563,11 +557,11 @@ mod tests {
         for pairs in [
             vec![],
             vec![
-                ("TUCANO_AUTH_REQUIRED", "true"),
-                ("TUCANO_JWT_SECRET", SECRET_OK),
+                ("TATU_AUTH_REQUIRED", "true"),
+                ("TATU_JWT_SECRET", SECRET_OK),
             ],
-            vec![("TUCANO_JWT_SECRET", "too-short")],
-            vec![("TUCANO_BOOTSTRAP_USERNAME", "admin")],
+            vec![("TATU_JWT_SECRET", "too-short")],
+            vec![("TATU_BOOTSTRAP_USERNAME", "admin")],
         ] {
             let before = config(&pairs);
             let after = layered(&pairs, None);
@@ -605,7 +599,7 @@ mod tests {
         // The ADR's worked example: one value from the file, another from the
         // environment, and both take effect.
         let file = file(r#"{"version": 1, "access_token_ttl": "30m"}"#);
-        let config = layered(&[("TUCANO_JWT_SECRET", SECRET_OK)], Some(&file)).expect("config");
+        let config = layered(&[("TATU_JWT_SECRET", SECRET_OK)], Some(&file)).expect("config");
         assert_eq!(
             config.jwt_secret.as_deref(),
             Some(SECRET_OK.as_bytes()),
@@ -621,7 +615,7 @@ mod tests {
     #[test]
     fn the_environment_wins_over_the_file_for_the_same_key() {
         let file = file(r#"{"version": 1, "access_token_ttl": "1h"}"#);
-        let config = layered(&[("TUCANO_ACCESS_TOKEN_TTL", "5m")], Some(&file)).expect("config");
+        let config = layered(&[("TATU_ACCESS_TOKEN_TTL", "5m")], Some(&file)).expect("config");
         assert_eq!(config.access_ttl, Duration::from_secs(300));
     }
 
@@ -630,7 +624,7 @@ mod tests {
         // "No secret may exist *only* in the file": where both sources carry a
         // secret, the environment's is the one that is used.
         let file = file(r#"{"version": 1, "jwt_secret": "a-file-secret-value-here-32-bytes"}"#);
-        let config = layered(&[("TUCANO_JWT_SECRET", SECRET_OK)], Some(&file)).expect("config");
+        let config = layered(&[("TATU_JWT_SECRET", SECRET_OK)], Some(&file)).expect("config");
         assert_eq!(config.jwt_secret.as_deref(), Some(SECRET_OK.as_bytes()));
     }
 
@@ -639,11 +633,8 @@ mod tests {
         // The both-sources refusal must not be defeatable by putting one half
         // in the file and the other in the environment.
         let file = file(r#"{"version": 1, "jwt_secret": "a-file-secret-value-here-32-bytes"}"#);
-        let error = layered(
-            &[("TUCANO_JWT_SECRET_FILE", "/tmp/never-read")],
-            Some(&file),
-        )
-        .expect_err("both sources");
+        let error = layered(&[("TATU_JWT_SECRET_FILE", "/tmp/never-read")], Some(&file))
+            .expect_err("both sources");
         assert!(
             matches!(error, ConfigError::SecretSourcesConflict),
             "{error:?}"
@@ -665,7 +656,7 @@ mod tests {
         let file = file(r#"{"version": 1, "access_token_ttl": "0"}"#);
         let error = layered(&[], Some(&file)).expect_err("zero lifetime");
         match error {
-            ConfigError::InvalidTtl { key, .. } => assert_eq!(key, "TUCANO_ACCESS_TOKEN_TTL"),
+            ConfigError::InvalidTtl { key, .. } => assert_eq!(key, "TATU_ACCESS_TOKEN_TTL"),
             other => panic!("expected a lifetime error, got {other:?}"),
         }
     }
@@ -674,7 +665,7 @@ mod tests {
     fn a_bootstrap_pair_may_be_completed_across_the_two_sources() {
         let file = file(r#"{"version": 1, "bootstrap_username": "admin"}"#);
         let config =
-            layered(&[("TUCANO_BOOTSTRAP_PASSWORD", "hunter2")], Some(&file)).expect("config");
+            layered(&[("TATU_BOOTSTRAP_PASSWORD", "hunter2")], Some(&file)).expect("config");
         assert_eq!(config.bootstrap_username.as_deref(), Some("admin"));
         assert_eq!(config.bootstrap_password.as_deref(), Some("hunter2"));
     }
@@ -721,7 +712,7 @@ mod tests {
         cfg.jwt_secret = Some(crate::config::secret::SecretValue::Plain(
             SECRET_OK.to_owned(),
         ));
-        let config = layered(&[("TUCANO_AUTH_REQUIRED", "false")], Some(&cfg)).expect("config");
+        let config = layered(&[("TATU_AUTH_REQUIRED", "false")], Some(&cfg)).expect("config");
         assert!(!config.required, "env false overrides file true");
     }
 
@@ -741,7 +732,7 @@ mod tests {
     #[test]
     fn refresh_token_ttl_env_wins_over_file() {
         let file = file(r#"{"version": 1, "refresh_token_ttl": "7d"}"#);
-        let config = layered(&[("TUCANO_REFRESH_TOKEN_TTL", "30d")], Some(&file)).expect("config");
+        let config = layered(&[("TATU_REFRESH_TOKEN_TTL", "30d")], Some(&file)).expect("config");
         assert_eq!(
             config.refresh_ttl,
             Duration::from_secs(2_592_000),
@@ -768,8 +759,8 @@ mod tests {
         );
         let config = layered(
             &[
-                ("TUCANO_BOOTSTRAP_USERNAME", "env-user"),
-                ("TUCANO_BOOTSTRAP_PASSWORD", "env-pass"),
+                ("TATU_BOOTSTRAP_USERNAME", "env-user"),
+                ("TATU_BOOTSTRAP_PASSWORD", "env-pass"),
             ],
             Some(&file),
         )
@@ -828,12 +819,12 @@ mod tests {
         let file = file(r#"{"version": 1}"#);
         let config = layered(
             &[
-                ("TUCANO_AUTH_REQUIRED", "true"),
-                ("TUCANO_JWT_SECRET", SECRET_OK),
-                ("TUCANO_ACCESS_TOKEN_TTL", "1h"),
-                ("TUCANO_REFRESH_TOKEN_TTL", "7d"),
-                ("TUCANO_BOOTSTRAP_USERNAME", "admin"),
-                ("TUCANO_BOOTSTRAP_PASSWORD", "hunter2"),
+                ("TATU_AUTH_REQUIRED", "true"),
+                ("TATU_JWT_SECRET", SECRET_OK),
+                ("TATU_ACCESS_TOKEN_TTL", "1h"),
+                ("TATU_REFRESH_TOKEN_TTL", "7d"),
+                ("TATU_BOOTSTRAP_USERNAME", "admin"),
+                ("TATU_BOOTSTRAP_PASSWORD", "hunter2"),
             ],
             Some(&file),
         )
@@ -861,12 +852,12 @@ mod tests {
         );
         let config = layered(
             &[
-                ("TUCANO_AUTH_REQUIRED", "true"),
-                ("TUCANO_JWT_SECRET", SECRET_OK),
-                ("TUCANO_ACCESS_TOKEN_TTL", "5m"),
-                ("TUCANO_REFRESH_TOKEN_TTL", "1d"),
-                ("TUCANO_BOOTSTRAP_USERNAME", "env-user"),
-                ("TUCANO_BOOTSTRAP_PASSWORD", "env-pass"),
+                ("TATU_AUTH_REQUIRED", "true"),
+                ("TATU_JWT_SECRET", SECRET_OK),
+                ("TATU_ACCESS_TOKEN_TTL", "5m"),
+                ("TATU_REFRESH_TOKEN_TTL", "1d"),
+                ("TATU_BOOTSTRAP_USERNAME", "env-user"),
+                ("TATU_BOOTSTRAP_PASSWORD", "env-pass"),
             ],
             Some(&file),
         )

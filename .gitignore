@@ -15,7 +15,7 @@
 # service never creates one, so anything matching these is one an operator
 # wrote; it belongs on the deployment, not in a commit. The documented template
 # is docs/deployment/config.example.json, which is committed.
-/tucano-config.json
+/tatu-config.json
 /*.config.json
 
 # `docker compose` loads `.env` automatically from this directory. It holds the

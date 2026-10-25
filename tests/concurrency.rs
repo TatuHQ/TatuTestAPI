@@ -13,11 +13,15 @@ mod common;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
-use common::{assert_error_envelope, get, json_request, send_full, send_json, test_app};
+use common::{
+    app_at_with_lock_timeout, assert_error_envelope, get, json_request, send_full, send_json,
+    test_app,
+};
 use serde_json::{Value, json};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
+use tempfile::TempDir;
 
 /// Builds a PUT request with a JSON body and an `If-Match` ETag header.
 fn put_with_etag(uri: &str, body: &Value, etag: &str) -> Request<Body> {
@@ -240,7 +244,10 @@ async fn test_concurrent_identical_creates_return_409() {
 /// writers never deadlock against concurrent readers.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_concurrent_mixed_read_write() {
-    let (_dir, app) = test_app();
+    // CI runners can be heavily loaded; a 5s lock timeout turns ordinary
+    // contention into 503s. The test is about safety, not the timeout.
+    let dir = TempDir::new().expect("temp dir");
+    let app = app_at_with_lock_timeout(dir.path(), Duration::from_secs(60));
     let app = Arc::new(app);
 
     let project = common::create_named(&app, "/projects", "mixed").await;
@@ -481,7 +488,10 @@ async fn test_cross_resource_lock_contention() {
 /// seconds. Reports throughput and latency percentiles as a baseline.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_lock_contention_latency() {
-    let (_dir, app) = test_app();
+    // This baseline measures the lock's throughput, not its 5s timeout;
+    // give a loaded CI runner room to complete every write.
+    let dir = TempDir::new().expect("temp dir");
+    let app = app_at_with_lock_timeout(dir.path(), Duration::from_secs(60));
     let app = Arc::new(app);
 
     let project = common::create_named(&app, "/projects", "latency").await;

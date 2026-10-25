@@ -7,7 +7,7 @@
 //! no grants, which is why creating a grant file and creating a project stay in
 //! step.
 //!
-//! Two rules shape this module. Every write takes the same `.tucano.lock` the
+//! Two rules shape this module. Every write takes the same `.tatu.lock` the
 //! document repository uses, so at most one writer touches the data directory
 //! at a time — and because locking one file twice from one process blocks,
 //! callers must never nest an [`AuthStore`] write inside a repository write.
@@ -165,7 +165,7 @@ impl AuthStore {
             .truncate(false)
             .read(true)
             .write(true)
-            .open(self.root.join(".tucano.lock"))?;
+            .open(self.root.join(".tatu.lock"))?;
         let deadline = Instant::now() + self.lock_timeout;
         loop {
             match lock.try_lock_exclusive() {
@@ -516,7 +516,7 @@ fn write_json_atomically(destination: &Path, value: &serde_json::Value) -> io::R
         .parent()
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "destination has no parent"))?;
     create_private_dir_all(directory)?;
-    let temporary = directory.join(format!(".tucano-{}.tmp", unique_suffix()));
+    let temporary = directory.join(format!(".tatu-{}.tmp", unique_suffix()));
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -929,7 +929,7 @@ mod tests {
             .create(true)
             .truncate(false)
             .write(true)
-            .open(directory.path().join(".tucano.lock"))
+            .open(directory.path().join(".tatu.lock"))
             .expect("lock file");
         lock.lock_exclusive()
             .expect("foreign holder takes the lock");

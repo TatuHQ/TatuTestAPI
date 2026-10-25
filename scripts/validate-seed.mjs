@@ -20,19 +20,19 @@
  *   node scripts/validate-seed.mjs [BASE_URL]
  *
  * Environment:
- *   TUCANO_API_URL               Base URL when no argument is given (default
+ *   TATU_API_URL               Base URL when no argument is given (default
  *                                http://localhost:3100, the Compose host port).
- *   TUCANO_BOOTSTRAP_USERNAME    Sign-in name of the bootstrap account, the
+ *   TATU_BOOTSTRAP_USERNAME    Sign-in name of the bootstrap account, the
  *                                system administrator the read assertions need.
- *   TUCANO_BOOTSTRAP_PASSWORD    Its password.
- *   TUCANO_VALIDATE_TOKEN        A ready-made bearer token, used instead of
+ *   TATU_BOOTSTRAP_PASSWORD    Its password.
+ *   TATU_VALIDATE_TOKEN        A ready-made bearer token, used instead of
  *                                signing in.
- *   TUCANO_SEED_VIEWER_USERNAME  Non-admin account to prove the refusal with
+ *   TATU_SEED_VIEWER_USERNAME  Non-admin account to prove the refusal with
  *                                (default viewer).
- *   TUCANO_SEED_VIEWER_PASSWORD  Its password (default viewer-seed-password).
- *   TUCANO_SEED_EDITOR_USERNAME  Account holding `editor` to prove role-gated
+ *   TATU_SEED_VIEWER_PASSWORD  Its password (default viewer-seed-password).
+ *   TATU_SEED_EDITOR_USERNAME  Account holding `editor` to prove role-gated
  *                                behaviour with (default editor).
- *   TUCANO_SEED_EDITOR_PASSWORD  Its password (default editor-seed-password).
+ *   TATU_SEED_EDITOR_PASSWORD  Its password (default editor-seed-password).
  *
  * The admin token is obtained by signing in with `POST /auth/login`, the route
  * the specification documents in §3 step 0. Minting one from the signing secret
@@ -43,11 +43,11 @@
  * Requires: node >= 22 (any Node with global fetch).
  */
 
-const API = (process.argv[2] ?? process.env.TUCANO_API_URL ?? "http://localhost:3100").replace(/\/$/, "");
-const VIEWER_USERNAME = process.env.TUCANO_SEED_VIEWER_USERNAME ?? "viewer";
-const VIEWER_PASSWORD = process.env.TUCANO_SEED_VIEWER_PASSWORD ?? "viewer-seed-password";
-const EDITOR_USERNAME = process.env.TUCANO_SEED_EDITOR_USERNAME ?? "editor";
-const EDITOR_PASSWORD = process.env.TUCANO_SEED_EDITOR_PASSWORD ?? "editor-seed-password";
+const API = (process.argv[2] ?? process.env.TATU_API_URL ?? "http://localhost:3100").replace(/\/$/, "");
+const VIEWER_USERNAME = process.env.TATU_SEED_VIEWER_USERNAME ?? "viewer";
+const VIEWER_PASSWORD = process.env.TATU_SEED_VIEWER_PASSWORD ?? "viewer-seed-password";
+const EDITOR_USERNAME = process.env.TATU_SEED_EDITOR_USERNAME ?? "editor";
+const EDITOR_PASSWORD = process.env.TATU_SEED_EDITOR_PASSWORD ?? "editor-seed-password";
 
 const PROJECTS = ["checkout.json", "payments.json"];
 const SUITES = {
@@ -227,16 +227,16 @@ async function login(username, password) {
 
 /** The bearer token the read assertions use: the administrator's. */
 async function adminToken() {
-  const provided = process.env.TUCANO_VALIDATE_TOKEN;
+  const provided = process.env.TATU_VALIDATE_TOKEN;
   if (provided) {
     return provided;
   }
-  const username = process.env.TUCANO_BOOTSTRAP_USERNAME;
-  const password = process.env.TUCANO_BOOTSTRAP_PASSWORD;
+  const username = process.env.TATU_BOOTSTRAP_USERNAME;
+  const password = process.env.TATU_BOOTSTRAP_PASSWORD;
   if (!username || !password) {
     throw new Error(
-      "set TUCANO_BOOTSTRAP_USERNAME and TUCANO_BOOTSTRAP_PASSWORD, the credentials of the " +
-        "seeded deployment, or TUCANO_VALIDATE_TOKEN with a ready-made bearer token",
+      "set TATU_BOOTSTRAP_USERNAME and TATU_BOOTSTRAP_PASSWORD, the credentials of the " +
+        "seeded deployment, or TATU_VALIDATE_TOKEN with a ready-made bearer token",
     );
   }
   return login(username, password);

@@ -4,7 +4,7 @@
 
 The Rust service implements CRUD and attachment endpoints, and `openapi.json` is checked in and served at `/api-docs`.
 
-The legacy [TucanoTest](https://github.com/ECiurleo/TucanoTest) implementation remains the behavioural authority for file formats. The legacy Draft 2020-12 schemas set `additionalProperties: false`, so adding any field is a breaking change and requires an explicit versioning plan recorded in this document before implementation.
+The legacy [TatuTest](https://github.com/ECiurleo/TatuTest) implementation remains the behavioural authority for file formats. The legacy Draft 2020-12 schemas set `additionalProperties: false`, so adding any field is a breaking change and requires an explicit versioning plan recorded in this document before implementation.
 
 Sanitised reference fixtures have **not** yet been captured, so cross-implementation contract tests are still outstanding.
 
@@ -131,13 +131,13 @@ To allow assembling runs from suites and cases, and recording per-case execution
 
 ## Hierarchy and Real-Home Storage Plan (Issue #65)
 
-Issue: [#65](https://github.com/TucanoTechnology/TucanoTestAPI/issues/65) — storage layout must mirror the
+Issue: [#65](https://github.com/TatuHQ/TatuTestAPI/issues/65) — storage layout must mirror the
 conceptual organisation so a project, suite, or case has one real home and supplementary files live with the
 entity. This plan supersedes the flat-layout behaviour implied by the baseline: `projects/`, `test_suites/`, and
 `test_cases/` are no longer flat sibling collections.
 
 **Amended in part by layout v3 (Issue #215).** This plan left runs, milestones and configurations in
-root-level collections. [#215](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215) moved all three
+root-level collections. [#215](https://github.com/TatuHQ/TatuTestAPI/issues/215) moved all three
 inside the project folder, and the tree below shows the current layout; the *Project-Scoped Runs, Milestones and
 Configurations Plan (Issue #215)* section of this document and
 [`docs/architecture/adr-storage-layout-v3.md`](../architecture/adr-storage-layout-v3.md) are the authority for
@@ -279,7 +279,7 @@ reads, the auth store's users and grants files, and the composition-copy walk al
 
 ## Real-Parent Creation Plan (Issue #66)
 
-Issue: [#66](https://github.com/TucanoTechnology/TucanoTestAPI/issues/66) — creating a suite or case requires a
+Issue: [#66](https://github.com/TatuHQ/TatuTestAPI/issues/66) — creating a suite or case requires a
 real parent; reads and global lists stay global.
 
 - Suites are created with `POST /projects/{project_id}/test_suites` (payload requires a non-empty `name`, as
@@ -305,7 +305,7 @@ real parent; reads and global lists stay global.
 
 ## Copy/Move Include Semantics Plan (Issue #67)
 
-Issue: [#67](https://github.com/TucanoTechnology/TucanoTestAPI/issues/67) — placing an existing entity into a
+Issue: [#67](https://github.com/TatuHQ/TatuTestAPI/issues/67) — placing an existing entity into a
 parent supports both duplicate-on-include and move semantics. This supersedes the Issue #23 composition notes for
 `POST /test_suites/{id}/test_cases` (which described an implicit copy) and clarifies Issue #24 run composition.
 
@@ -336,7 +336,7 @@ store copies, no recorded run is affected.
 
 ## Milestone Duplicate Plan (Issue #68)
 
-Issue: [#68](https://github.com/TucanoTechnology/TucanoTestAPI/issues/68)
+Issue: [#68](https://github.com/TatuHQ/TatuTestAPI/issues/68)
 
 - `POST /milestones/{id}/duplicate` mirrors the other duplicate endpoints: reads the source milestone, applies an
   optional `newId` override, else derives `{id base}-copy-{nanos}`, retains `name`, dates, `status`,
@@ -364,7 +364,7 @@ when no `newId`/`newName`/`newTitle` override is present, preserving the legacy 
 
 ## Configurations Activation Plan (Issue #69)
 
-Issue: [#69](https://github.com/TucanoTechnology/TucanoTestAPI/issues/69)
+Issue: [#69](https://github.com/TatuHQ/TatuTestAPI/issues/69)
 
 - The `configurations` resource is added to the repository resource set so the already-registered CRUD routes
   stop returning `400 Invalid request` from the storage layer.
@@ -378,7 +378,7 @@ Issue: [#69](https://github.com/TucanoTechnology/TucanoTestAPI/issues/69)
 
 ## Layered Architecture Plan (Issue #71)
 
-Issue: [#71](https://github.com/TucanoTechnology/TucanoTestAPI/issues/71) — supersedes the Issue #70 handler
+Issue: [#71](https://github.com/TatuHQ/TatuTestAPI/issues/71) — supersedes the Issue #70 handler
 decomposition plan, which is closed as superseded. #71 is the first step of the combined P0 refactor.
 
 - The crate is layered bottom-up, and each layer depends only on the layer beneath it:
@@ -406,7 +406,7 @@ decomposition plan, which is closed as superseded. #71 is the first step of the 
 
 ## Error Contract and Schema Strictness Plan (Issue #76)
 
-Issue: [#76](https://github.com/TucanoTechnology/TucanoTestAPI/issues/76) — `openapi.json` described an error
+Issue: [#76](https://github.com/TatuHQ/TatuTestAPI/issues/76) — `openapi.json` described an error
 contract that the service does not return: the `400`s several operations actually answer were missing, the
 `413` was published as the error envelope rather than the plain text the router sends, the multipart upload
 route's extractor-level rejection was undocumented, and the published schemas were neither as strict as the
@@ -521,7 +521,7 @@ These were found while reconciling the document and are left as they are:
 
 ## Identity Normalisation Plan (Issue #78)
 
-Issue: [#78](https://github.com/TucanoTechnology/TucanoTestAPI/issues/78) — a create body that omits the
+Issue: [#78](https://github.com/TatuHQ/TatuTestAPI/issues/78) — a create body that omits the
 identity field either stores a document that satisfies its model or is refused with a `4xx`, never `201`
 followed by a `500`. Found while reconciling the error contract for #76, which recorded it as outside its scope;
 this plan resolves it.
@@ -552,7 +552,7 @@ this plan resolves it.
 
 ## Partial Update Plan (Issue #80)
 
-Issue: [#80](https://github.com/TucanoTechnology/TucanoTestAPI/issues/80) — a `PUT` with a partial body used to
+Issue: [#80](https://github.com/TatuHQ/TatuTestAPI/issues/80) — a `PUT` with a partial body used to
 replace the stored document wholesale, so the fields the body left out were silently discarded: `PUT
 /projects/P1.json {}` dropped `name` and `PUT /milestones/M1.json {}` stored `{}`, after which
 `GET /milestones/M1.json/progress` answered `500 storage_error`. The ticket offered a merge and a refusal; this is
@@ -589,7 +589,7 @@ the recorded merge decision.
 
 ## Per-Step Attachment Plan (Issue #93)
 
-Issue: [#93](https://github.com/TucanoTechnology/TucanoTestAPI/issues/93) — a structured step could describe an
+Issue: [#93](https://github.com/TatuHQ/TatuTestAPI/issues/93) — a structured step could describe an
 action and an expected result but could not carry the evidence for it, so a screenshot or log belonging to one
 step had to be attached to the whole case. This is the versioning plan for the schema field and the three
 operations the fix adds, recorded before the implementation commits.
@@ -644,7 +644,7 @@ operations the fix adds, recorded before the implementation commits.
 
 ## Tags Plan (Issue #49)
 
-Issue: [#49](https://github.com/TucanoTechnology/TucanoTestAPI/issues/49) — projects, suites, cases and runs carry a
+Issue: [#49](https://github.com/TatuHQ/TatuTestAPI/issues/49) — projects, suites, cases and runs carry a
 free-form `tags` array for labelling, filtering and release planning. The field, the filter and the document
 entries are already on `main`; this note records the contract they stand for, so the behaviour the integration
 suite pins is written down rather than inferred from it.
@@ -692,7 +692,7 @@ suite pins is written down rather than inferred from it.
 
 ## JUnit XML Import Plan (Issue #85)
 
-Issue: [#85](https://github.com/TucanoTechnology/TucanoTestAPI/issues/85) — a continuous-integration run produces
+Issue: [#85](https://github.com/TatuHQ/TatuTestAPI/issues/85) — a continuous-integration run produces
 a JUnit XML report, and until now every `<testcase>` in it had to be typed into `POST /test_runs/{id}/results` by
 hand. `POST /test_runs/{id}/import/junit` reads such a report and records the results it can name, reporting what
 it did rather than failing on the parts it cannot use.
@@ -732,7 +732,7 @@ it did rather than failing on the parts it cannot use.
 
 ## JSON Result Import Plan (Issue #86)
 
-Issue: [#86](https://github.com/TucanoTechnology/TucanoTestAPI/issues/86) — Issue #85 reads a JUnit XML report, but
+Issue: [#86](https://github.com/TatuHQ/TatuTestAPI/issues/86) — Issue #85 reads a JUnit XML report, but
 a runner without a JUnit reporter emits JSON. `POST /test_runs/{id}/import/json` reads an array of result entries
 and records them against the run, reusing the `ImportSummary` envelope Issue #85 introduced.
 
@@ -768,7 +768,7 @@ and records them against the run, reusing the `ImportSummary` envelope Issue #85
 
 ## Defect Link Plan (Issue #87)
 
-Issue: [#87](https://github.com/TucanoTechnology/TucanoTestAPI/issues/87) — a failed result needs to name the defect
+Issue: [#87](https://github.com/TatuHQ/TatuTestAPI/issues/87) — a failed result needs to name the defect
 it raised, and the first read of that link is a listing. This issue adds the `DefectLink` shape and
 `GET /test_runs/{id}/results/{case_id}/defects`; creating and removing links is Issue #88.
 
@@ -798,7 +798,7 @@ it raised, and the first read of that link is a listing. This issue adds the `De
 
 ## Defect Link Writes Plan (Issue #88)
 
-Issue: [#88](https://github.com/TucanoTechnology/TucanoTestAPI/issues/88) — Issue #87 gave a failed result a
+Issue: [#88](https://github.com/TatuHQ/TatuTestAPI/issues/88) — Issue #87 gave a failed result a
 way to *read* the defects it raised; this issue gives it a way to name and unname one, through
 `POST /test_runs/{id}/results/{case_id}/defects` and
 `DELETE /test_runs/{id}/results/{case_id}/defects/{link_id}`.
@@ -843,7 +843,7 @@ way to *read* the defects it raised; this issue gives it a way to name and unnam
 
 ## Case-Owned Defect Links (Issue #460)
 
-Issue: [#460](https://github.com/TucanoTechnology/TucanoTestAPI/issues/460) — a defect link is a fact about
+Issue: [#460](https://github.com/TatuHQ/TatuTestAPI/issues/460) — a defect link is a fact about
 the **test case**, not about whichever run happened to be recording it. This section supersedes the storage
 rule of the Issue #87 and #88 plans ("links live on the result, inside the run"); the routes, verbs and
 response shapes of both plans stand unchanged.
@@ -872,11 +872,11 @@ response shapes of both plans stand unchanged.
 
 ## Test Case Versioning Plan (Issue #90)
 
-Issue: [#90](https://github.com/TucanoTechnology/TucanoTestAPI/issues/90) — persists the version numbers and
+Issue: [#90](https://github.com/TatuHQ/TatuTestAPI/issues/90) — persists the version numbers and
 revision snapshots the normative plan in
 [`test-case-versioning-plan.md`](./test-case-versioning-plan.md) describes. This issue is storage only: the read
-routes that expose the history belong to [#91](https://github.com/TucanoTechnology/TucanoTestAPI/issues/91) and
-the run-side capture to [#92](https://github.com/TucanoTechnology/TucanoTestAPI/issues/92).
+routes that expose the history belong to [#91](https://github.com/TatuHQ/TatuTestAPI/issues/91) and
+the run-side capture to [#92](https://github.com/TatuHQ/TatuTestAPI/issues/92).
 
 - **`TestCase` gains two optional, API-managed fields.** `version` is an integer and `lastModified` is a
   `date-time` string. Both are response-only: a create stamps `version: 1` and the current instant, an update
@@ -913,8 +913,8 @@ the run-side capture to [#92](https://github.com/TucanoTechnology/TucanoTestAPI/
 
 ## Run Case-Version Capture Plan (Issue #92)
 
-Issue: [#92](https://github.com/TucanoTechnology/TucanoTestAPI/issues/92) — the run-side capture the test-case
-versioning plan leaves to a sibling of [#52](https://github.com/TucanoTechnology/TucanoTestAPI/issues/52). It
+Issue: [#92](https://github.com/TatuHQ/TatuTestAPI/issues/92) — the run-side capture the test-case
+versioning plan leaves to a sibling of [#52](https://github.com/TatuHQ/TatuTestAPI/issues/52). It
 makes a run record the revision of each case it snapshotted, so editing a case never changes what a past run
 reports.
 
@@ -927,7 +927,7 @@ reports.
   qualifying edit to the live case, never revises a version the run already pinned: the run is a snapshot, and
   its `caseVersions` has to stay one too.
 - **A case with no version of its own is pinned as `1`.** A case written before
-  [#90](https://github.com/TucanoTechnology/TucanoTestAPI/issues/90) carries no `version`; the capture stores
+  [#90](https://github.com/TatuHQ/TatuTestAPI/issues/90) carries no `version`; the capture stores
   `1` for it, matching how the read routes treat such a case.
 - **A result may name a case the store does not hold.** The results route has always accepted a `testCaseId` no
   case document matches, and it still does: the case is looked up best-effort, pinned at its own version when it
@@ -945,8 +945,8 @@ reports.
 
 ## Coverage Report Plan (Issue #94)
 
-Issue: [#94](https://github.com/TucanoTechnology/TucanoTestAPI/issues/94) — the first child of
-[#37](https://github.com/TucanoTechnology/TucanoTestAPI/issues/37), whose scope says to "report test case count per
+Issue: [#94](https://github.com/TatuHQ/TatuTestAPI/issues/94) — the first child of
+[#37](https://github.com/TatuHQ/TatuTestAPI/issues/37), whose scope says to "report test case count per
 project section/suite". This child introduces the shared reports module the summary-report sibling builds on.
 
 - **One read-only route.** `GET /reports/coverage` answers the counts as
@@ -981,9 +981,9 @@ project section/suite". This child introduces the shared reports module the summ
 ### Milestone progress: the buckets partition `totalCases` (Issues #195, #286)
 
 `GET /milestones/{id}/progress` reports `totalCases` alongside five status buckets (`passed`, `failed`,
-`blocked`, `untested`, `retest`). [#195](https://github.com/TucanoTechnology/TucanoTestAPI/issues/195) froze
+`blocked`, `untested`, `retest`). [#195](https://github.com/TatuHQ/TatuTestAPI/issues/195) froze
 the legacy arithmetic, in which the two counted different populations and a client that added up the buckets
-could read the payload as inconsistent. [#286](https://github.com/TucanoTechnology/TucanoTestAPI/issues/286)
+could read the payload as inconsistent. [#286](https://github.com/TatuHQ/TatuTestAPI/issues/286)
 replaced that arithmetic with a single population, so the buckets now **partition** `totalCases`:
 
 - **One population per linked run, deduplicated by case id.** A run holds the cases its `testCases` snapshot
@@ -1018,8 +1018,8 @@ replaced that arithmetic with a single population, so the buckets now **partitio
 
 ## Summary Report Plan (Issue #95)
 
-Issue: [#95](https://github.com/TucanoTechnology/TucanoTestAPI/issues/95) — the second child of
-[#37](https://github.com/TucanoTechnology/TucanoTestAPI/issues/37), building on the shared `src/domain/reports.rs`
+Issue: [#95](https://github.com/TatuHQ/TatuTestAPI/issues/95) — the second child of
+[#37](https://github.com/TatuHQ/TatuTestAPI/issues/37), building on the shared `src/domain/reports.rs`
 module the coverage sibling introduced.
 
 - **One read-only route.** `GET /reports/summary` answers
@@ -1076,8 +1076,8 @@ module the coverage sibling introduced.
 
 ## Request ID Plan (Issue #106)
 
-Issue: [#106](https://github.com/TucanoTechnology/TucanoTestAPI/issues/106) — the request-id child of
-[#14](https://github.com/TucanoTechnology/TucanoTestAPI/issues/14), the observability parent.
+Issue: [#106](https://github.com/TatuHQ/TatuTestAPI/issues/106) — the request-id child of
+[#14](https://github.com/TatuHQ/TatuTestAPI/issues/14), the observability parent.
 
 - **One middleware at the router boundary.** `src/api/request_id.rs` resolves an id before the request reaches
   any route, publishes it for the rest of the request, and echoes it on the response. Nothing is written, so no
@@ -1121,7 +1121,7 @@ Issue: [#106](https://github.com/TucanoTechnology/TucanoTestAPI/issues/106) — 
 
 ## OpenAPI Typing Plan (Issue #140)
 
-Issue: [#140](https://github.com/TucanoTechnology/TucanoTestAPI/issues/140) — the document published the ten
+Issue: [#140](https://github.com/TatuHQ/TatuTestAPI/issues/140) — the document published the ten
 operations that accept a JSON body with a bare `{"type": "object"}` request schema, published 31 of the `2xx`
 answers as a description with no body at all, and left `Error.code` an unconstrained string, so a generated
 client could not tell what a write accepts from the document alone. This plan types all three. It is
@@ -1224,7 +1224,7 @@ finds the write bodies that legitimately accept a `tags` array (`ProjectCreateRe
 
 ## Operation Metadata Plan (Issue #145)
 
-Issue: [#145](https://github.com/TucanoTechnology/TucanoTestAPI/issues/145) — the document named no operation
+Issue: [#145](https://github.com/TatuHQ/TatuTestAPI/issues/145) — the document named no operation
 (`operationId`) and grouped nothing by resource, so a generated client fell back to anonymous, path-derived
 method names (`postProjectsIdDuplicate`) and could not tell which call belonged to which resource. It also
 documented the five `POST … /duplicate` routes as `$ref`s to `components` fragments, which OpenAPI 3.0.3 has no
@@ -1312,7 +1312,7 @@ resolves, so no schema or route changed.
 
 ## Project-Scoped Runs, Milestones and Configurations Plan (Issue #215)
 
-Issue: [#215](https://github.com/TucanoTechnology/TucanoTestAPI/issues/215) — `test_runs/<id>.json`,
+Issue: [#215](https://github.com/TatuHQ/TatuTestAPI/issues/215) — `test_runs/<id>.json`,
 `milestones/<id>.json` and `configurations/<id>.json` are the last three resources stored in a root-level
 collection, which the real-home rule of Issue #65 forbids for everything else. This section records the
 compatibility surface of the change; the decision, its alternatives and its consequences are in
@@ -1331,7 +1331,7 @@ rather than becoming folders:
 ```
 
 `Resource::ROOT_DIRS` becomes `[Projects]`, so `projects/` is the only collection below the data root (beside
-`auth/` and `.tucano.lock`). **No document changes shape**: no field is added to `TestRun`, `Milestone` or
+`auth/` and `.tatu.lock`). **No document changes shape**: no field is added to `TestRun`, `Milestone` or
 `TestConfiguration`, the home is the folder and is never stored, so the legacy Draft 2020-12 schemas are
 untouched and `SUPPORTED_FORMAT_VERSION` stays `1`
 ([`file-format-versioning-plan.md`](./file-format-versioning-plan.md)).
@@ -1393,17 +1393,17 @@ child names in a project folder, so a suite or case folder cannot take one.
 
 No migration is performed or scripted. `FileRepository::new` creates only `projects/`, never reads the three
 legacy root collections, and **refuses to start** when one of them still holds `*.json` documents (ignoring
-`.tucano-*.tmp`), naming the offending directories and the manual recipe. It never deletes anything: an empty
+`.tatu-*.tmp`), naming the offending directories and the manual recipe. It never deletes anything: an empty
 legacy directory, which every pre-v3 volume has, is not an error. Rolling the image back against a v3 volume
 leaves the older build answering `404` for these three resources and reporting empty milestone progress, so a
 full rollback means restoring the pre-change snapshot the promotion runbook requires.
 
 ## Run Result Merge and Membership Plan (Issues #284, #285)
 
-Issues: [#284](https://github.com/TucanoTechnology/TucanoTestAPI/issues/284) — re-recording a result for a case
+Issues: [#284](https://github.com/TatuHQ/TatuTestAPI/issues/284) — re-recording a result for a case
 the run already holds replaced the whole result, so a partial recording discarded the `notes`, `durationMs` and
 `attachments` the previous one carried together with the defect links it had — and
-[#285](https://github.com/TucanoTechnology/TucanoTestAPI/issues/285) — `POST /test_runs/{id}/results` validated
+[#285](https://github.com/TatuHQ/TatuTestAPI/issues/285) — `POST /test_runs/{id}/results` validated
 `status` and nothing else, so a run could hold a result for a case it never contained, and a malformed
 `durationMs` / `notes` or an unknown field was silently dropped.
 
@@ -1473,7 +1473,7 @@ the run already holds replaced the whole result, so a partial recording discarde
 
 ## Concurrent Write Durability Plan (Issue #323)
 
-Issue: [#323](https://github.com/TucanoTechnology/TucanoTestAPI/issues/323) — audit finding `F-177-3`
+Issue: [#323](https://github.com/TatuHQ/TatuTestAPI/issues/323) — audit finding `F-177-3`
 (`docs/security/audit-s2-storage-and-filesystem.md`): the document write path ran its read-modify-write as
 three separately locked steps, so two concurrent `PUT`s that read the same test-case version both claimed the
 next one, the second revision snapshot was discarded silently, and both callers were answered `200` — a write
@@ -1510,7 +1510,7 @@ contract, and this section records them.
   error envelope has always used); `412` distinguishes the failed
   precondition from a create-time `409` without inventing a code.
 
-Issue: [#324](https://github.com/TucanoTechnology/TucanoTestAPI/issues/324) — `validate_component` and
+Issue: [#324](https://github.com/TatuHQ/TatuTestAPI/issues/324) — `validate_component` and
 `validate_document_id` in `src/storage/layout.rs` refused a hostile component but imposed no length bound, so an
 identifier or name longer than the filesystem's per-name limit was accepted at the API layer and failed only
 when the store wrote it, reaching the client as `500 storage_error` (audit findings F-176-3 and F-177-4, one
@@ -1897,7 +1897,7 @@ root cause merged by the #180 triage; CWE-20).
   is recorded as a follow-up in `docs/security/audit-s2-storage-and-filesystem.md` (`O-177-14`). The same
   question on the duplicate routes is consolidated to one answer: a body `newId` the store cannot file answers
   `400 invalid_id` on every duplicate route, where `POST /test_suites/{id}/duplicate` previously answered
-  `400 invalid_request` for the same value (the API side of TucanoTestGUI #165). Each route's path identifier
+  `400 invalid_request` for the same value (the API side of TatuTestGUI #165). Each route's path identifier
   keeps the code it already answered — `invalid_request` on `POST /projects/{id}/duplicate`, `invalid_id` on the
   suite, run and milestone routes, and `404 not_found` on `POST /test_cases/{id}/duplicate`, which addresses a
   case verbatim and needs no `.json` suffix there, so a bare body `newId` on that route stays usable as it
@@ -1917,7 +1917,7 @@ root cause merged by the #180 triage; CWE-20).
   `tests/service.rs::duplicate_routes_refuse_a_body_new_id_the_store_cannot_file`.
 - **The project-scoped suite, case and run listings filter by tag** (Issue #293). `GET
   /projects/{id}/test_suites`, `GET /projects/{id}/test_cases` and `GET /projects/{id}/test_runs` answered the
-  complete child set and ignored the query string, so the GUI's project-scoped listings (TucanoTestGUI #119)
+  complete child set and ignored the query string, so the GUI's project-scoped listings (TatuTestGUI #119)
   could not use the `?tags=` filter the contract documents, even though `TestSuite`, `TestCase` and `TestRun`
   all carry `tags`; the gap is the deliberate #49/#122 case only for `milestones` and `configurations`, whose
   models define no `tags` field. All three listings now read `ListQuery` and honour the parameters their

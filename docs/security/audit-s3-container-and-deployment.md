@@ -1,12 +1,12 @@
 # Security Audit S3 — Container and deployment posture (Issue #178)
 
-Issue: [#178](https://github.com/TucanoTechnology/TucanoTestAPI/issues/178). Parent epic:
-[#166](https://github.com/TucanoTechnology/TucanoTestAPI/issues/166) — *Carry out security audit*.
+Issue: [#178](https://github.com/TatuHQ/TatuTestAPI/issues/178). Parent epic:
+[#166](https://github.com/TatuHQ/TatuTestAPI/issues/166) — *Carry out security audit*.
 
 This report runs surface **S3** of [audit-scope.md](audit-scope.md): *"The image and its build, the
 Compose configuration and container hardening, secret delivery from outside the image, the volume as
 the only state, network exposure, and rollback to an immutable tag."* It carries findings only;
-nothing here is fixed. Remediation belongs to the tickets [#180](https://github.com/TucanoTechnology/TucanoTestAPI/issues/180)
+nothing here is fixed. Remediation belongs to the tickets [#180](https://github.com/TatuHQ/TatuTestAPI/issues/180)
 raises.
 
 - **Affected revision (the pinned target):** `bb0ed2353cf9c50978b533cd5adc44563d60c4a3`
@@ -37,7 +37,7 @@ tear-down item, not a second subject.
 
 One scratch Compose project, `audit-178`, plus the `docker run` arms the sub-tasks needed. Every arm
 was built from the pinned revision in the worktree named in §1. The operator's long-lived instance
-(Compose project `tucano-test`, container `tucano-test-api-1`) was never a target and was not stopped
+(Compose project `tatu-test`, container `tatu-test-api-1`) was never a target and was not stopped
 or rebuilt: it reported `Up 33 hours` with `0.0.0.0:3100->3000/tcp, [::]:3100->3000/tcp` before,
 during, and after the audit.
 
@@ -55,13 +55,13 @@ mechanism is the shipped one.
    separately below.
 2. **Paths:** `build.context: .` → the worktree path, and the data bind `./data:/data` →
    `/tmp/audit-178/data:/data`. The container contract (`/data`) is untouched.
-3. **Image tag:** `tucano-test-api:local` → `tucano-test-audit:bb0ed23`. This is deliberate: it lets
+3. **Image tag:** `tatu-test-api:local` → `tatu-test-audit:bb0ed23`. This is deliberate: it lets
    the audit rebuild without ever retagging the name the operator's live image holds. The mechanism
    F-178-2 describes is a property of `image:` + `build:` composing into a single local name, and is
-   unchanged by renaming the name; the shipped `image: tucano-test-api:local` with `build: .` is the
+   unchanged by renaming the name; the shipped `image: tatu-test-api:local` with `build: .` is the
    file that has it.
 4. **Only the `api` service is ever started.** `services.gui` builds from
-   `context: ../Tucano-Test-GUI`, which from `/tmp/audit-178` would resolve to `/tmp/Tucano-Test-GUI`.
+   `context: ../Tatu-Test-GUI`, which from `/tmp/audit-178` would resolve to `/tmp/Tatu-Test-GUI`.
    The `gui` service is not part of the S3 threat surface under test.
 5. **The audit data directory is mode `0777`, owner `1000:1000`, on a `tmpfs`.** Rootless Docker does
    not create a missing bind-mount source, so the directory has to exist and be writable by the
@@ -69,12 +69,12 @@ mechanism is the shipped one.
    of the shipped `./data` bind.
 
 The shipped hardening keys were all left in place, and the exposure arm ran with
-`TUCANO_AUTH_REQUIRED` **unset**, which is what the shipped file does: `grep -c
-'TUCANO_AUTH_REQUIRED' docker-compose.yml` → `0`.
+`TATU_AUTH_REQUIRED` **unset**, which is what the shipped file does: `grep -c
+'TATU_AUTH_REQUIRED' docker-compose.yml` → `0`.
 
 ### 2.2 Arms
 
-| Arm | Compose project / container | Host port | `TUCANO_AUTH_REQUIRED` | Result |
+| Arm | Compose project / container | Host port | `TATU_AUTH_REQUIRED` | Result |
 | --- | --- | --- | --- | --- |
 | Shipped posture | `audit-178` / `audit-178-api-1` | 3310 | unset (the shipped default) | `docker port` → `0.0.0.0:3310` and `[::]:3310`; unauthenticated `GET /projects` → `200 [];` unauthenticated `POST /projects` → `201` (F-178-1) |
 | Secret by file | `audit-178-filesecret` (`docker run -d`) | none published | `true` | `Status=running ExitCode=0`, no log output; unauthenticated `GET /projects` → `401 unauthorized`; login → `200` with a token (pass entry) |
@@ -84,7 +84,7 @@ The shipped hardening keys were all left in place, and the exposure arm ran with
 | Build context | `docker build`, no run | — | — | 11,311 context files, context tar 3,506,821,120 bytes (Info observation) |
 
 Container facts common to the Compose arm, read back with `docker inspect` rather than assumed:
-`Config.User=tucano`, `ReadonlyRootfs=true`, `SecurityOpt=[no-new-privileges:true]`, `/tmp` present
+`Config.User=tatu`, `ReadonlyRootfs=true`, `SecurityOpt=[no-new-privileges:true]`, `/tmp` present
 as a tmpfs, and `/data` the only bind-mounted writable path. The image id of the audited build is
 `sha256:2bad9aa8ea02…`; after the S3-4 rebuild the tag resolves to `sha256:3400b0b874cb…`.
 
@@ -108,9 +108,9 @@ service, at the line that asserts it:
 | `38` | `restart: unless-stopped` | the `gui` service's restart policy |
 
 Keys **absent** from the file, which is as important as the keys present: no `cap_drop`, no
-`healthcheck`, no `TUCANO_AUTH_REQUIRED`, no `user` override, no `security_opt` beyond
+`healthcheck`, no `TATU_AUTH_REQUIRED`, no `user` override, no `security_opt` beyond
 `no-new-privileges`. `services.api` carries `build: {context: ., dockerfile: Dockerfile}`,
-`image: tucano-test-api:local`, `environment: {TUCANO_DATA_DIR: /data, PORT: 3000}`,
+`image: tatu-test-api:local`, `environment: {TATU_DATA_DIR: /data, PORT: 3000}`,
 `volumes: - ./data:/data`, and `deploy: {replicas: 1, resources.limits: {cpus: "1.0", memory: 512M}}`.
 
 ### 3.2 The shipped image's build
@@ -122,10 +122,10 @@ Keys **absent** from the file, which is as important as the keys present: no `ca
 | `1` | `FROM rust:1.98.0-slim-trixie AS builder` | tag-pinned; the class is F-179-1's, already raised in S4 and not re-raised here |
 | `6`–`8` | `COPY Cargo.toml Cargo.lock ./`, `COPY src ./src`, `COPY openapi.json swagger.html ./` | the complete set of source inputs; no `COPY .` |
 | `13` | `FROM debian:trixie-slim@sha256:abc9cb88a5587630d7f915f47b23b0668fe250fbfc6457aa4d52b534c1bbf73f` | digest-pinned |
-| `33` | `COPY --from=builder /build/target/release/tucano-test /usr/local/bin/tucano-test` | the only artifact copied forward |
+| `33` | `COPY --from=builder /build/target/release/tatu-test /usr/local/bin/tatu-test` | the only artifact copied forward |
 | `35` | `LABEL org.opencontainers.image.version="${BUILD_NUMBER}"` | `local` by default |
-| `41` | `USER tucano` | uid 10001 |
-| `42` | `ENTRYPOINT ["/usr/local/bin/tucano-test"]` | — |
+| `41` | `USER tatu` | uid 10001 |
+| `42` | `ENTRYPOINT ["/usr/local/bin/tatu-test"]` | — |
 
 No `HEALTHCHECK` instruction. No `cap_drop`, no `--chown` on a writable path beyond the `/data` the
 `RUN` step creates, and **no `.dockerignore`** in the repository.
@@ -144,7 +144,7 @@ the S4 findings it names are cited, never re-raised.
 | --- | --- | --- | --- | --- |
 | Dependency advisory scan runs on every PR and every push to `main` | `audit` (`.github/workflows/security.yml:17`) | `:36` `cargo install cargo-audit --locked`, `:38` `cargo audit` | none found — the job can genuinely fail: no `continue-on-error` and no `\|\| true` anywhere in the file | — |
 | Secret scan "scans repository history" | `secret-scan` (`:40`) | `:45` `fetch-depth: 0`, `:47` `gitleaks detect --source /repo --no-git --redact` | filesystem-only: `--no-git` means the checked-out history is never walked | **yes — F-179-5** |
-| Container scan fails on CRITICAL/HIGH | `container-scan` (`:49`) | `:54` `docker build --file Dockerfile --tag tucano-test .`, `:55` `trivy-action@v0.36.0`, `:59` `exit-code: "1"`, `:60` `ignore-unfixed: true`, `:61` `severity: CRITICAL,HIGH` | fixed-criteria only, and it scans only its own local build — the published artifact is a separate build (F-178-4) | partially — F-179-1/F-179-2 are the pinning half |
+| Container scan fails on CRITICAL/HIGH | `container-scan` (`:49`) | `:54` `docker build --file Dockerfile --tag tatu-test .`, `:55` `trivy-action@v0.36.0`, `:59` `exit-code: "1"`, `:60` `ignore-unfixed: true`, `:61` `severity: CRITICAL,HIGH` | fixed-criteria only, and it scans only its own local build — the published artifact is a separate build (F-178-4) | partially — F-179-1/F-179-2 are the pinning half |
 | SBOM is produced and validated | `sbom` (`:63`) | `:89` `cargo cyclonedx --format json --override-filename sbom`, `:93` the inline `python3` validation, `:114` `upload-artifact@v5` with `:117 path: sbom.json`, `:118 retention-days: 90` | it is never attached to, or published with, the image a consumer deploys | **no — F-178-5** |
 | Published artifact is scanned | — | `release.yml` pushes with `docker/build-push-action@v6`, `push: true` | **no scan step at all**, and no `provenance:`, `sbom:`, `attestations:`, or `id-token:` | **no — F-178-4** |
 | Scans run weekly as well as per-PR | all four | `security.yml:10` `cron: "17 3 * * 1"` | none | — |
@@ -157,7 +157,7 @@ F-179-3, F-179-4 and F-179-5 are **not** re-raised.
 ### 3.4 The configuration boundary's enumerated inputs
 
 The loader's surface, read from the code at the pinned revision rather than from documentation:
-`TUCANO_CONFIG_FILE` (`src/config.rs:48`) is the only way the file is named; the file's schema has
+`TATU_CONFIG_FILE` (`src/config.rs:48`) is the only way the file is named; the file's schema has
 exactly eight keys (`version`, `auth_required`, `jwt_secret`, `jwt_secret_file`, `access_token_ttl`,
 `refresh_token_ttl`, `bootstrap_username`, `bootstrap_password` —
 `docs/deployment/config.example.json`); the secret-bearing environment keys are the four in
@@ -177,7 +177,7 @@ is deliberate.
   the request is ordinary and the route is not the subject; what is audited is which interface the
   shipped configuration binds and whether the control that makes that binding safe is on.
 - **Where:** `docker-compose.yml:11` (`- "3100:3000"`, no host-address prefix) and the file's absent
-  `TUCANO_AUTH_REQUIRED` (0 matches), against
+  `TATU_AUTH_REQUIRED` (0 matches), against
   `docs/security/authentication-decision.md`'s "The API must **not** be exposed beyond a trusted
   network until this is implemented" and [threat-model.md](threat-model.md) line 148's status.
 - **Affected revision:** `bb0ed2353cf9c50978b533cd5adc44563d60c4a3`
@@ -221,12 +221,12 @@ is deliberate.
   10:    ports:
   11:      - "3100:3000"
 
-  $ grep -n 'TUCANO_AUTH_REQUIRED' docker-compose.yml || echo "auth is not enabled by the shipped stack"
+  $ grep -n 'TATU_AUTH_REQUIRED' docker-compose.yml || echo "auth is not enabled by the shipped stack"
   auth is not enabled by the shipped stack
   ```
 
 - **Observed:** the shipped Compose file publishes the listener on `0.0.0.0` and `[::]`, and sets no
-  `TUCANO_AUTH_REQUIRED`, so the container that ships starts in the authentication-off arm. An
+  `TATU_AUTH_REQUIRED`, so the container that ships starts in the authentication-off arm. An
   unauthenticated `GET /projects` from a non-loopback address returns `200` with the project list, an
   unauthenticated `POST /projects` returns `201` and the resource is readable back, while
   `/auth/me` correctly answers `401` (the route exists and enforces; the stack simply does not turn
@@ -270,7 +270,7 @@ is deliberate.
   machine, and on this host the published address is reachable from the LAN. Reading taken:
   **Critical**.
 - **Suggested fix:** publish on `127.0.0.1` by default (`- "127.0.0.1:3100:3000"`) and/or set
-  `TUCANO_AUTH_REQUIRED=true` in the shipped Compose file, so that the safe posture is the default
+  `TATU_AUTH_REQUIRED=true` in the shipped Compose file, so that the safe posture is the default
   and the unsafe one is the deliberate choice; state the expectation in `README.md` next to the port
   table, which today documents the port without the constraint. A defence-in-depth companion is a
   reverse proxy or firewall rule, but neither is a substitute for not shipping the unsafe default.
@@ -285,11 +285,11 @@ is deliberate.
 ### F-178-2: Record an image id the documented Compose rollback can actually restore
 
 > **Resolved after the audited revision (note added post-audit; the finding text below describes
-> `bb0ed235` and nothing has been edited away).** The remediation is [#329](https://github.com/TucanoTechnology/TucanoTestAPI/issues/329),
-> landed by PR [#350](https://github.com/TucanoTechnology/TucanoTestAPI/pull/350): Step 0 of
+> `bb0ed235` and nothing has been edited away).** The remediation is [#329](https://github.com/TatuHQ/TatuTestAPI/issues/329),
+> landed by PR [#350](https://github.com/TatuHQ/TatuTestAPI/pull/350): Step 0 of
 > `canary-validation-and-rollback.md` now records the running container's image id and pins it
 > under a rollback-only tag before any rebuild, and the Rollback section restores by re-tagging
-> that recorded id onto the mutable `tucano-test-api:local` name, recreating with
+> that recorded id onto the mutable `tatu-test-api:local` name, recreating with
 > `--no-build --force-recreate`, and asserting the inspected id still matches. The sentence
 > quoted below (`:140` — *“Rollback re-deploys `PREVIOUS` … it never moves a tag.”*) is absent
 > from the current tree precisely because that correction rewrote it: the claim did not hold for
@@ -302,7 +302,7 @@ is deliberate.
 - **In scope:** S3 — "rollback to an immutable tag" ([audit-scope.md](audit-scope.md) § 2). The trust
   boundary is operational rather than one of the nine: the rollback procedure is a control the
   deployment guide and the canary runbook promise the operator.
-- **Where:** `docker-compose.yml:8` (`image: tucano-test-api:local`) together with `docker-compose.yml:7`
+- **Where:** `docker-compose.yml:8` (`image: tatu-test-api:local`) together with `docker-compose.yml:7`
   (`build: {context: ., dockerfile: Dockerfile}`), against
   `docs/deployment/canary-validation-and-rollback.md:49` ("Record `PREVIOUS` before touching anything;
   it is the rollback target."), `:140` ("Rollback re-deploys `PREVIOUS` and re-runs the checks; it
@@ -316,12 +316,12 @@ is deliberate.
   $ PREVIOUS=$(docker inspect --format '{{.Image}}' audit-178-api-1); echo "$PREVIOUS"
   sha256:2bad9aa8ea02ada4b5a2e2c08c54b0ae4ae3c6ce7f36f9f2ace7a006aeeff43a
 
-  $ docker image ls tucano-test-audit --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedSince}}'
-  tucano-test-audit:bb0ed23 2bad9aa8ea02 12 minutes ago
+  $ docker image ls tatu-test-audit --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedSince}}'
+  tatu-test-audit:bb0ed23 2bad9aa8ea02 12 minutes ago
 
   $ docker compose -f /tmp/audit-178/compose.yml -p audit-178 build --build-arg BUILD_NUMBER=audit-4701 api
-  $ docker image ls tucano-test-audit --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedSince}}'
-  tucano-test-audit:bb0ed23 3400b0b874cb About a minute ago
+  $ docker image ls tatu-test-audit --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedSince}}'
+  tatu-test-audit:bb0ed23 3400b0b874cb About a minute ago
 
   # the runbook's Compose rollback, verbatim:
   $ docker compose -f /tmp/audit-178/compose.yml -p audit-178 up --detach --no-deps --force-recreate api
@@ -339,7 +339,7 @@ is deliberate.
   Error: no such object: 2bad9aa8ea02
   ```
 
-- **Observed:** `image: tucano-test-api:local` with `build: .` means the single local name is
+- **Observed:** `image: tatu-test-api:local` with `build: .` means the single local name is
   retagged on every `--build`, so `PREVIOUS` loses its only tag. In this environment the previous
   image is then pruned outright — `docker image ls --filter dangling=true` is empty and the image id
   named by `PREVIOUS` is not addressable by tag **or** by id (`No such object`). The runbook's
@@ -347,7 +347,7 @@ is deliberate.
   "restore the previously pinned image tag") therefore redeployed the **candidate**: the recreated
   container runs `sha256:3400b0b874cb…`, the same id the tag now names. The rollback silently did
   nothing. Independent corroboration from the operator's own instance, without touching it: the tag
-  `tucano-test-api:local` resolves to `sha256:8f075af3c2e7` while the live container's `.Image` is
+  `tatu-test-api:local` resolves to `sha256:8f075af3c2e7` while the live container's `.Image` is
   `sha256:13f10c0e9208` — the tag and the running image had already diverged there too.
 - **Expected:** the runbook's Compose instruction is executable with an immutable identity, and the
   restored container runs the previous image. The mechanism the runbook describes
@@ -359,7 +359,7 @@ is deliberate.
 - **Impact:** a failed release is the moment the operator reaches for this runbook, and the step they
   reach for re-deploys the build they are trying to escape. Who is affected: anyone following the
   runbook against the shipped Compose file. Deployment configuration: independent of
-  `TUCANO_AUTH_REQUIRED`; the retag happens at build time and neither arm avoids it. The severity
+  `TATU_AUTH_REQUIRED`; the retag happens at build time and neither arm avoids it. The severity
   axis is *Limited* — the consequence is a **slower rollback**, not disclosed or corrupted data, and
   the operator still has the image id in their shell history — and the exploitability axis is
   *Difficult*, because it needs a failed release **and** an operator who follows the documented
@@ -374,7 +374,7 @@ is deliberate.
 - **Suggested fix:** publish immutable `build-<run number>` / `vMAJOR.MINOR.PATCH` tags from CI and
   reference them in the Compose file, so `PREVIOUS` is a registry tag as the runbook assumes; or, if
   the local-build path is to stay, amend the runbook to record the image **id** and re-tag it
-  (`docker tag "$PREVIOUS" tucano-test-api:local`) before recreating the service — and keep the
+  (`docker tag "$PREVIOUS" tatu-test-api:local`) before recreating the service — and keep the
   previous id from being pruned. The `release.yml` path already produces both tag forms
   (`type=ref,event=tag`, `type=raw,value=build-${{ github.run_number }}`), so the Compose file is the
   only piece that has to change for the first option.
@@ -391,7 +391,7 @@ is deliberate.
 - **Severity:** Low
 - **In scope:** S3 — "the Compose configuration and container hardening".
 - **Where:** `docker-compose.yml` (no `cap_drop` key anywhere in the 44-line file) and `Dockerfile`
-  (no capability change; the runtime stage ends `USER tucano`).
+  (no capability change; the runtime stage ends `USER tatu`).
 - **Affected revision:** `bb0ed2353cf9c50978b533cd5adc44563d60c4a3`
 - **Reproduction:**
 
@@ -399,7 +399,7 @@ is deliberate.
   $ docker inspect --format 'User={{.Config.User}} Readonly={{.HostConfig.ReadonlyRootfs}}
       CapAdd={{.HostConfig.CapAdd}} CapDrop={{.HostConfig.CapDrop}}
       SecOpt={{.HostConfig.SecurityOpt}} Privileged={{.HostConfig.Privileged}}' audit-178-api-1
-  User=tucano Readonly=true CapAdd=[] CapDrop=[] SecOpt=[no-new-privileges:true] Privileged=false
+  User=tatu Readonly=true CapAdd=[] CapDrop=[] SecOpt=[no-new-privileges:true] Privileged=false
   ```
 
   `CapBnd` (the bounding set the kernel gives the process) is `00000000a80425fb`, which is Docker's
@@ -407,7 +407,7 @@ is deliberate.
 - **Observed:** the stack applies no `cap_drop`, so the container runs with Docker's default
   capability set although the service needs none of it — it listens on a TCP port above 1024, reads a
   bind-mounted data directory it owns, and writes to its own tmpfs. Every other hardening claim in the
-  file **does** hold and is recorded as a pass entry: `User=tucano`, `ReadonlyRootfs=true`,
+  file **does** hold and is recorded as a pass entry: `User=tatu`, `ReadonlyRootfs=true`,
   `no-new-privileges:true`, `/tmp` as a tmpfs, and `/data` the only writable mount.
 - **Expected:** a service that needs no capability runs with none. The control this is measured
   against is the hardening half of S3's scope sentence. Compose's `cap_drop: ["ALL"]` is the
@@ -422,7 +422,7 @@ is deliberate.
   scored *Difficult* × *Moderate* rather than *Moderate* × *Moderate*: the matrix's *Moderate*
   exploitability test needs "one prerequisite step" that is repeatable, and an unknown second defect
   is a condition rather than a step. Difficult × Moderate = **Low**, matching the design's
-  recommendation. Deployment configuration: independent of `TUCANO_AUTH_REQUIRED`.
+  recommendation. Deployment configuration: independent of `TATU_AUTH_REQUIRED`.
 - **Suggested fix:** add `cap_drop: ["ALL"]` to the `api` service in `docker-compose.yml`, alongside
   the read-only rootfs the stack already has; if a future feature needs a specific capability, add it
   back explicitly rather than inheriting the default set.
@@ -450,13 +450,13 @@ is deliberate.
   # no `run:` step, no provenance:/sbom:/attestations:, no id-token permission
 
   $ grep -n 'docker build\|trivy\|exit-code' .github/workflows/security.yml
-  54:        run: docker build --file Dockerfile --tag tucano-test .
+  54:        run: docker build --file Dockerfile --tag tatu-test .
   55:      - uses: aquasecurity/trivy-action@v0.36.0
   59:          exit-code: "1"
   ```
 
-- **Observed:** `container-scan` builds `tucano-test` in its own job and scans **that** image;
-  `release.yml` performs a separate build and pushes it to `ghcr.io/tucanotechnology/tucanotestapi`
+- **Observed:** `container-scan` builds `tatu-test` in its own job and scans **that** image;
+  `release.yml` performs a separate build and pushes it to `ghcr.io/tatuhq/tatutestapi`
   with no scan step between the build and the push. Nothing verifies that the published artifact is
   the scanned one, and the builder stage is tag-pinned (F-179-1), so "same revision, same content" is
   not established by anything in the workflows. No `provenance:`, `sbom:`, or `attestations:` is
@@ -475,7 +475,7 @@ is deliberate.
   **Info**, and the one-level escalation for default configurations was considered and **not**
   applied: the defect has no remotely reachable manifestation of its own, and attributing F-178-1's
   reachability to it would inflate a coverage gap into a vulnerability. Deployment configuration:
-  independent of `TUCANO_AUTH_REQUIRED`. Recorded at Info rather than Low so the decision to accept
+  independent of `TATU_AUTH_REQUIRED`. Recorded at Info rather than Low so the decision to accept
   it is deliberate; a maintainer who wants the published digest gated can move to Low without
   disagreeing with the analysis.
 - **Suggested fix:** add a scan step to `release.yml` between the build and the push (or scan the
@@ -525,7 +525,7 @@ is deliberate.
   artifact is retained and only for builds CI made. Exploitability *Difficult*, impact *Limited* —
   the same axes as F-178-4 — so **Info** by the matrix, at the same reasoning and with the same
   consideration of the escalation rule. Deployment configuration: independent of
-  `TUCANO_AUTH_REQUIRED`.
+  `TATU_AUTH_REQUIRED`.
 - **Suggested fix:** attach the SBOM to the image (an OCI referrer or an attestation via
   `docker/build-push-action`'s `sbom: true`), or publish it beside the release tag, and either way
   state in `scanning-policy.md` where a consumer finds it. If workflow-artifact retention is the
@@ -597,7 +597,7 @@ decision is deliberate rather than accidental.
 Controls the audit tested and could not break. Each entry names the test that proves it.
 
 - **No secret reaches any inspection channel.** The file-supplied secret arm started from a
-  read-only mount with `TUCANO_JWT_SECRET_FILE=/run/secrets/jwt`, and the value appeared in **no**
+  read-only mount with `TATU_JWT_SECRET_FILE=/run/secrets/jwt`, and the value appeared in **no**
   channel: `docker inspect` → 0 occurrences; `docker logs` → 0; the container's process environment
   (`tr '\0' '\n' < /proc/1/environ | grep -c '…'`) → 0; every response body → 0; and the image's own
   history, `Config.Env`, and `Config.Labels` → 0. Invariant 7 (credentials never in the clear)
@@ -605,7 +605,7 @@ Controls the audit tested and could not break. Each entry names the test that pr
 - **The image channel is clean for value-supplied secrets too.** `docker history --no-trunc`,
   `docker inspect {{json .Config.Env}}`, and the image labels carry no secret string for the arm that
   supplied one by value, so the layer-caching channel does not leak what the mount channel protects.
-- **A file-supplied secret makes the enforcing arm reachable.** `TUCANO_AUTH_REQUIRED=true` with the
+- **A file-supplied secret makes the enforcing arm reachable.** `TATU_AUTH_REQUIRED=true` with the
   secret supplied by file: unauthenticated `GET /projects` → `HTTP/1.0 401 Unauthorized
   {"error":{"code":"missing_token","message":"Authentication required","requestId":"…"}}`;
   `POST /auth/login` with the bootstrap pair → `HTTP/1.0 200 OK` with `accessToken` (225 characters),
@@ -617,7 +617,7 @@ Controls the audit tested and could not break. Each entry names the test that pr
   `Error: ShortSecret { length: 31 }`; both sources supplied → `Error: SecretSourcesConflict`; a
   file path that does not exist → `Error: SecretFile { path: "/run/secrets/absent", source: Os {
   code: 2, kind: NotFound, message: "No such file or directory" } }`. The variable named is
-  `TUCANO_JWT_SECRET` / `TUCANO_JWT_SECRET_FILE`, never a value.
+  `TATU_JWT_SECRET` / `TATU_JWT_SECRET_FILE`, never a value.
 - **Every unresolvable configuration refuses startup.** Four configuration-file arms, each
   `Running=false ExitCode=1`, four lines of output, and zero occurrences of either secret value or of
   the raw `/tmp/audit-178/conf` path: missing file → `Error: UnreadableFile { source: Os { code: 2,
@@ -640,16 +640,16 @@ Controls the audit tested and could not break. Each entry names the test that pr
   `touch: cannot touch '/nope': Read-only file system`, exit `1`; and `docker inspect {{json
   .Mounts}}` shows exactly one read-write bind mount (the data directory) plus the anonymous volume
   the Dockerfile's `VOLUME ["/data"]` created when no bind was supplied. Invariants 1 and 9.
-- **The hardening claims the file makes all hold.** `User=tucano` (uid 10001, not root),
+- **The hardening claims the file makes all hold.** `User=tatu` (uid 10001, not root),
   `ReadonlyRootfs=true`, `SecurityOpt=[no-new-privileges:true]`, `/tmp` a tmpfs, `/data` the only
   writable mount, `Privileged=false`. The **absent** claim is F-178-3; everything the file asserts is
   true of the running container.
 - **The image identifies its build and discloses no secret or internal path.** The metadata excerpt:
   `Id=sha256:2bad9aa8ea02…`, `Created` at the audited build, `Size=184770920`, `Env=[PATH=…,
-  TUCANO_DATA_DIR=/data, PORT=3000]`, `Labels={com.docker.compose.project: audit-178,
+  TATU_DATA_DIR=/data, PORT=3000]`, `Labels={com.docker.compose.project: audit-178,
   com.docker.compose.service: api, com.docker.compose.version: 5.4.0,
-  org.opencontainers.image.version: local}`, `User: "tucano"`, `WorkingDir: null`,
-  `Entrypoint: ["/usr/local/bin/tucano-test"]`, `Cmd: null`, `ExposedPorts: {"3000/tcp": {}}`,
+  org.opencontainers.image.version: local}`, `User: "tatu"`, `WorkingDir: null`,
+  `Entrypoint: ["/usr/local/bin/tatu-test"]`, `Cmd: null`, `ExposedPorts: {"3000/tcp": {}}`,
   `Volumes: {"/data": {}}`. The version label is the build argument and is `local` for a local build,
   and nothing in the metadata names a secret or a host path (S3-11).
 - **The policy's "fails the build" claims are enforceable.** A whole-file read of
@@ -678,7 +678,7 @@ Controls the audit tested and could not break. Each entry names the test that pr
 - **The Info worked example** ([audit-scope.md](audit-scope.md) § 5): `scripts/clear-data.mjs`. S4
   confirmed the calibration against the code and recorded it in its own §6; re-checked at this
   revision, the script's candidate list is unchanged (`scripts/clear-data.mjs:26-31`: `argv[2]`,
-  `API_URL`, `TUCANO_API_URL`, `http://localhost:3100`, `http://localhost:8080/api`,
+  `API_URL`, `TATU_API_URL`, `http://localhost:3100`, `http://localhost:8080/api`,
   `http://localhost:3000`, with `:46` falling back to the first candidate) and `Authorization` does
   not appear in the file at all. The calibration holds and this report adds nothing to S4's
   confirmation; it is **not** re-raised as a finding, per the audit's baseline rule.
@@ -687,12 +687,12 @@ Controls the audit tested and could not break. Each entry names the test that pr
 
 The scratch Compose project and its volume were removed (`docker compose -p audit-178 down -v`),
 together with the `docker run` arms (`audit-178-api-1`, `audit-178-filesecret`), the local image built
-for the audit (`tucano-test-audit:bb0ed23`), the candidate image the S3-4 rebuild produced
+for the audit (`tatu-test-audit:bb0ed23`), the candidate image the S3-4 rebuild produced
 (`sha256:3400b0b874cb…`, which the retag left unaddressable by tag), and the scratch directory
 `/tmp/audit-178` that held the compose copy, the config fixtures, and the data directory. The
-operator's long-lived Compose project `tucano-test` and its container `tucano-test-api-1` were never a
+operator's long-lived Compose project `tatu-test` and its container `tatu-test-api-1` were never a
 target, were never stopped, and were never rebuilt; it reported `Up` before, during, and after the
-audit, with `tucano-test-api:local` still resolving to `sha256:8f075af3c2e7`.
+audit, with `tatu-test-api:local` still resolving to `sha256:8f075af3c2e7`.
 
 One detail worth recording for whoever runs the next audit, because it cost this one a debugging
 cycle and is not a property of the application: the container runs as uid 10001, so files it creates

@@ -39,8 +39,8 @@ impl Display for BootstrapError {
                 write!(formatter, "cannot prepare the bootstrap account: {error}")
             }
             Self::MissingCredentials => formatter.write_str(
-                "TUCANO_AUTH_REQUIRED is set and no accounts exist, so \
-                 TUCANO_BOOTSTRAP_USERNAME and TUCANO_BOOTSTRAP_PASSWORD must be too",
+                "TATU_AUTH_REQUIRED is set and no accounts exist, so \
+                 TATU_BOOTSTRAP_USERNAME and TATU_BOOTSTRAP_PASSWORD must be too",
             ),
         }
     }
@@ -198,7 +198,7 @@ mod tests {
         let (_directory, store) = store();
         let error = ensure_bootstrap_user(&store, &config(true, false), NOW).expect_err("refused");
         assert!(matches!(error, BootstrapError::MissingCredentials));
-        assert!(error.to_string().contains("TUCANO_BOOTSTRAP_USERNAME"));
+        assert!(error.to_string().contains("TATU_BOOTSTRAP_USERNAME"));
         assert!(store.users().expect("users").is_empty());
     }
 

@@ -16,7 +16,7 @@
       "defectLinks": [
         {
           "defectId": "42",
-          "defectUrl": "https://github.com/tucanotechnology/example/issues/42",
+          "defectUrl": "https://github.com/tatuhq/example/issues/42",
           "linkId": "link-1790453281268787785",
           "linkedAt": "1790453281",
           "title": "direct case fails",

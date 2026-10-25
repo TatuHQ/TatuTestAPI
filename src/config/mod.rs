@@ -29,7 +29,7 @@
 //! below carries none of those by construction, so no `Display` impl can leak
 //! them by accident.
 //!
-//! [`docs/security/configuration-decision.md`]: https://github.com/TucanoTechnology/TucanoTestAPI/blob/main/docs/security/configuration-decision.md
+//! [`docs/security/configuration-decision.md`]: https://github.com/TatuHQ/TatuTestAPI/blob/main/docs/security/configuration-decision.md
 
 use std::env;
 use std::error::Error;
@@ -45,11 +45,11 @@ use secret::{KeyRing, SecretError, SecretValue, load_key_ring_from_lookup};
 /// The environment variable naming the configuration file.
 ///
 /// One of the three settings the ADR keeps environment-only, alongside
-/// `TUCANO_DATA_DIR` and `PORT`: all three must be readable *before* the file
+/// `TATU_DATA_DIR` and `PORT`: all three must be readable *before* the file
 /// can be located, and the orchestrator owns all three. Setting it names a
 /// file; leaving it unset is the documented way to say "no configuration file",
 /// and preserves the pre-file behaviour of the service.
-pub const CONFIG_FILE_ENV: &str = "TUCANO_CONFIG_FILE";
+pub const CONFIG_FILE_ENV: &str = "TATU_CONFIG_FILE";
 
 /// The only `version` value this build understands.
 ///
@@ -427,7 +427,7 @@ pub enum ConfigError {
     /// The named configuration file could not be read.
     ///
     /// Deliberately path-free: the ADR forbids a raw file path in an error. The
-    /// message names `TUCANO_CONFIG_FILE` instead, which is what an operator
+    /// message names `TATU_CONFIG_FILE` instead, which is what an operator
     /// needs in order to know which setting to look at.
     UnreadableFile {
         /// The underlying OS error, kept server-side for the startup message.
@@ -811,7 +811,7 @@ mod tests {
     #[test]
     fn a_valid_file_is_read_from_disk() {
         let directory = tempfile::tempdir().expect("tempdir");
-        let path = directory.path().join("tucano-config.json");
+        let path = directory.path().join("tatu-config.json");
         std::fs::write(&path, document(r#", "auth_required": true"#)).expect("write file");
         let file = ConfigFile::read(&path).expect("read file");
         assert_eq!(file.auth_required, Some(true));
@@ -826,7 +826,7 @@ mod tests {
     #[test]
     fn a_named_file_is_loaded_through_the_lookup() {
         let directory = tempfile::tempdir().expect("tempdir");
-        let path = directory.path().join("tucano-config.json");
+        let path = directory.path().join("tatu-config.json");
         std::fs::write(&path, document("")).expect("write file");
         let loaded = load(
             |key| (key == CONFIG_FILE_ENV).then(|| path.to_str().expect("utf-8 path").to_owned()),

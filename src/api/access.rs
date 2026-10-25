@@ -23,7 +23,7 @@
 //!   project is governed by its home alone — it is not thereby open to every
 //!   caller.
 //!
-//! With `TUCANO_AUTH_REQUIRED` off every helper returns before it resolves
+//! With `TATU_AUTH_REQUIRED` off every helper returns before it resolves
 //! anything, so the trusted-network deployment reads no grant and answers no
 //! extra 404 — it is the service it was before auth existed.
 
@@ -834,14 +834,14 @@ pub(crate) fn revoke_project_grants<R: Repository + 'static>(
         // every delete of a grantless project (#408, observability contract).
         Ok(false) => {}
         Ok(true) => tracing::info!(
-            target: "tucano.audit",
+            target: "tatu.audit",
             action = "revoke_grants",
             resource = "project",
             id = project_id,
             outcome = "success"
         ),
         Err(_) => tracing::info!(
-            target: "tucano.audit",
+            target: "tatu.audit",
             action = "revoke_grants",
             resource = "project",
             id = project_id,

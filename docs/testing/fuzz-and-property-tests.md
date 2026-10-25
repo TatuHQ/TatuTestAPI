@@ -7,10 +7,10 @@ value; both assert a *contract* — a decode answers or errors, never panics, an
 identifier never becomes a path that leaves the data root.
 
 - **Property suite:** [`tests/property.rs`](../../tests/property.rs) — issue
-  [#100](https://github.com/TucanoTechnology/TucanoTestAPI/issues/100)
+  [#100](https://github.com/TatuHQ/TatuTestAPI/issues/100)
 - **Fuzz crate:** [`fuzz/`](../../fuzz/) — issue
-  [#100](https://github.com/TucanoTechnology/TucanoTestAPI/issues/100)
-- **Parent epic:** [#16](https://github.com/TucanoTechnology/TucanoTestAPI/issues/16)
+  [#100](https://github.com/TatuHQ/TatuTestAPI/issues/100)
+- **Parent epic:** [#16](https://github.com/TatuHQ/TatuTestAPI/issues/16)
 
 ## 1. What runs where
 

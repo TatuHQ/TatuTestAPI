@@ -1,6 +1,6 @@
 # Audit design and decomposition — S1 (#176), S2 (#177), S3 (#178)
 
-Epic: [#166](https://github.com/TucanoTechnology/TucanoTestAPI/issues/166) — Carry out security audit.
+Epic: [#166](https://github.com/TatuHQ/TatuTestAPI/issues/166) — Carry out security audit.
 The normative method is [`audit-scope.md`](audit-scope.md); the boundaries, abuse cases, and invariants
 quoted below are from [`threat-model.md`](threat-model.md); the scan claims reviewed by #178 are from
 [`scanning-policy.md`](scanning-policy.md). The report precedent this design copies is
@@ -35,8 +35,8 @@ this audit series; a sub-task that cannot be carried out inside them is not carr
 > Target = the merge-base commit the audit records in its report. Never audit a moving `main`.
 >
 > A **throwaway** Compose project with its **own volume** and a **free host port** is mandatory for every
-> audit. Never point an audit at the operator's long-lived instance: Compose project `tucano-test` /
-> container `tucano-test-api-1`. **Never stop, rebuild, or point anything at it.**
+> audit. Never point an audit at the operator's long-lived instance: Compose project `tatu-test` /
+> container `tatu-test-api-1`. **Never stop, rebuild, or point anything at it.**
 >
 > Fixes are **out of scope** for every audit task. An auditor records a finding and moves on.
 >
@@ -80,10 +80,10 @@ against; a later commit is a different audit.
 ### 2. The throwaway target (mandatory, one per audit)
 
 One image built at `$REV`, one private data directory shared by two containers, two arms so that every
-control is exercised both with `TUCANO_AUTH_REQUIRED` off (the shipped default) and on.
+control is exercised both with `TATU_AUTH_REQUIRED` off (the shipped default) and on.
 
 **Why a host directory rather than a `docker volume`.** `scripts/seed.mjs` provisions accounts and grants
-by writing JSON under `TUCANO_DATA_DIR` on the host (`TUCANO_SEED_AUTH_CMD` overrides this). A named volume
+by writing JSON under `TATU_DATA_DIR` on the host (`TATU_SEED_AUTH_CMD` overrides this). A named volume
 is not addressable from the seed script, so the throwaway "volume" is a dedicated directory that only this
 audit creates, uses, and deletes. It is never `./data`, never the Compose volume of the operator's stack,
 and never shared with any other audit. This is the *only* deviation this design makes from a literal
@@ -91,22 +91,22 @@ and never shared with any other audit. This is the *only* deviation this design 
 
 ```bash
 # A.3 — build the audit image at $REV. Tag it so it can never be confused with the operator's.
-export AUDIT_IMAGE=tucano-test-audit:$REV
+export AUDIT_IMAGE=tatu-test-audit:$REV
 docker build --file "$AUDIT_ROOT/Dockerfile" --build-arg BUILD_NUMBER=audit \
   --tag "$AUDIT_IMAGE" "$AUDIT_ROOT"
 
-# A.4 — the private data directory ("own volume"). uid 10001 is the image's `tucano` user: the
+# A.4 — the private data directory ("own volume"). uid 10001 is the image's `tatu` user: the
 # bind-mount ownership gotcha recorded by the S4 audit. Chown before starting anything.
 export AUDIT_DATA=/tmp/audit-rev/data
 rm -rf "$AUDIT_DATA"; mkdir -p "$AUDIT_DATA"
 chown -R 10001:10001 "$AUDIT_DATA"
-export TUCANO_DATA_DIR="$AUDIT_DATA"        # the seed/teardown scripts run in this shell
+export TATU_DATA_DIR="$AUDIT_DATA"        # the seed/teardown scripts run in this shell
 
 # A.5 — free host ports. 3210/3211 are free and are NOT 3100 (the operator's published port).
 # Bind to 127.0.0.1 for #176 and #177: those audits probe the HTTP surface, not the network edge.
 # #178 deliberately binds to all interfaces — see its own section.
 
-# Arm A — the shipped default: TUCANO_AUTH_REQUIRED unset.
+# Arm A — the shipped default: TATU_AUTH_REQUIRED unset.
 docker run -d --name audit-a \
   --label ao.session="$AO_SESSION_ID" \
   -p 127.0.0.1:3210:3000 -v "$AUDIT_DATA":/data \
@@ -120,10 +120,10 @@ docker run -d --name audit-b \
   --label ao.session="$AO_SESSION_ID" \
   -p 127.0.0.1:3211:3000 -v "$AUDIT_DATA":/data \
   --read-only --tmpfs /tmp --security-opt no-new-privileges:true \
-  -e TUCANO_AUTH_REQUIRED=true \
-  -e TUCANO_JWT_SECRET="$AUDIT_JWT_SECRET" \
-  -e TUCANO_BOOTSTRAP_USERNAME=auditor \
-  -e TUCANO_BOOTSTRAP_PASSWORD="$AUDIT_BOOTSTRAP_PASSWORD" \
+  -e TATU_AUTH_REQUIRED=true \
+  -e TATU_JWT_SECRET="$AUDIT_JWT_SECRET" \
+  -e TATU_BOOTSTRAP_USERNAME=auditor \
+  -e TATU_BOOTSTRAP_PASSWORD="$AUDIT_BOOTSTRAP_PASSWORD" \
   "$AUDIT_IMAGE"
 
 export A=http://127.0.0.1:3210      # auth off (the default)
@@ -134,8 +134,8 @@ export B=http://127.0.0.1:3211      # auth on
 Record its state and never touch it:
 
 ```bash
-docker ps --filter name=tucano-test-api-1 --format '{{.Names}}\t{{.Status}}\t{{.Ports}}'
-docker ps --filter name=tucano-test-api --format '{{.Names}}\t{{.Status}}'
+docker ps --filter name=tatu-test-api-1 --format '{{.Names}}\t{{.Status}}\t{{.Ports}}'
+docker ps --filter name=tatu-test-api --format '{{.Names}}\t{{.Status}}'
 # The report's tear-down section states this was Up before, during, and after. If it is ever not Up,
 # stop and report; do not attempt to repair it.
 ```
@@ -145,8 +145,8 @@ docker ps --filter name=tucano-test-api --format '{{.Names}}\t{{.Status}}'
 
 ```bash
 # A.6 — seed. Auth is enforced on arm B; the viewer account is granted `owner` on checkout.json only.
-TUCANO_SEED_VIEWER_PASSWORD=$(openssl rand -hex 12) \
-TUCANO_JWT_SECRET="$AUDIT_JWT_SECRET" \
+TATU_SEED_VIEWER_PASSWORD=$(openssl rand -hex 12) \
+TATU_JWT_SECRET="$AUDIT_JWT_SECRET" \
 node "$AUDIT_ROOT/scripts/seed.mjs" "$B"
 # The seed is not idempotent, by design: it runs exactly once per throwaway data directory.
 # Re-running it means deleting $AUDIT_DATA and starting from A.4.
@@ -161,7 +161,7 @@ Record the seeded identifiers the probes depend on, because the whole audit refe
 | Seeded fact | Value | Used by |
 | --- | --- | --- |
 | Projects | `checkout.json`, `payments.json` | every role/IDOR probe |
-| Viewer account | `TUCANO_SEED_VIEWER_PASSWORD` (generated above) | every 403 probe |
+| Viewer account | `TATU_SEED_VIEWER_PASSWORD` (generated above) | every 403 probe |
 | Viewer grants | `owner` on `checkout.json`; **no grant** on `payments.json` | the cross-project probe |
 | Suites | `smoke.checkout.json`; `regression.checkout.json` (left empty); `smoke.payments.json` | suite-level guards, the empty-collection case |
 | Cases | `TC-LOGIN-1`, `TC-LOGIN-2`, `TC-CART-1`, `TC-MOVE-1`, `TC-PROJECT-1`, `TC-ORDERS-1`, `TC-CATALOG-1`, `TC-SEARCH-1` | case-level probes |
@@ -182,7 +182,7 @@ docker rmi "$AUDIT_IMAGE"
 git worktree remove --force "$AUDIT_ROOT"
 docker volume ls | grep -i audit                  # must be empty
 docker ps -a --filter label=ao.session="$AO_SESSION_ID"   # must be empty
-docker ps --filter name=tucano-test-api-1         # the operator's instance: still Up
+docker ps --filter name=tatu-test-api-1         # the operator's instance: still Up
 ```
 
 ### 3. Baselines that are not findings
@@ -255,7 +255,7 @@ Each report is a standalone document with this skeleton:
 2. **§1 Revision pinned** — the table: repo revision (full SHA), `origin/main` at audit time = the
    merge base, `Cargo.lock` SHA-256, and for #178 the built image id. State that the audit did not follow a
    moving `main`.
-3. **§2 Throwaway target (step 2)** — one row per arm: arm name, host port, `TUCANO_AUTH_REQUIRED`, the
+3. **§2 Throwaway target (step 2)** — one row per arm: arm name, host port, `TATU_AUTH_REQUIRED`, the
    smoke outcome, and the container facts (`Config.User`, `ReadonlyRootfs`, `no-new-privileges`, `/tmp`
    tmpfs, the private data directory). State explicitly that the operator's instance was untouched.
 4. **§3 Surface enumerated before probing (step 3)** — counts, not assertions. For #176: 49 documented
@@ -411,7 +411,7 @@ requirement is that it lands inside the case's own directory and that the respon
 browser treat it as a document of the API's origin. Both are measured (`S1-9`).
 
 **2.7 Does turning authentication off make every probe moot?** No. The shipped default is
-`TUCANO_AUTH_REQUIRED` off, and probes run on **both** arms. A probe that finds the guard absent on arm A
+`TATU_AUTH_REQUIRED` off, and probes run on **both** arms. A probe that finds the guard absent on arm A
 and present on arm B is recorded as the *documented* behaviour of an opt-in control — that fact is the
 basis of the S3 exposure finding, and belongs to #178. A probe that finds an *authorization* defect on arm B
 is #176's.
@@ -481,7 +481,7 @@ Each sub-task states the probe, the command, the control that must hold, and the
   PY
   ```
 - **Expected (control holds).** `401` with `missing_token`, then `401` with `invalid_token`; every response
-  carries `WWW-Authenticate: Bearer realm="Tucano Test API"`; no response body contains data.
+  carries `WWW-Authenticate: Bearer realm="TatuTest API"`; no response body contains data.
 - **Evidence.** Pass entry crediting `tests/auth.rs::every_guarded_operation_refuses_an_anonymous_caller`
   and `::a_token_this_deployment_did_not_mint_is_refused`. Any 200, 500, or data leak is a finding.
 
@@ -508,7 +508,7 @@ Each sub-task states the probe, the command, the control that must hold, and the
   2. **Tamper** one base64 character of the access token → 401 `invalid_token`. *(pass)*
   3. **Forge** `{"alg":"none"}` / a token signed with a different secret → 401 `invalid_token`. *(pass;
      baseline `a_token_this_deployment_did_not_mint_is_refused`)*
-  4. **Expire**: run a third arm with `TUCANO_ACCESS_TOKEN_TTL=1` (optional, only if time allows) and reuse
+  4. **Expire**: run a third arm with `TATU_ACCESS_TOKEN_TTL=1` (optional, only if time allows) and reuse
      the token after 2 s → 401 `token_expired`. *(pass)*
   5. **Spend a refresh token twice** → the second exchange is 401 `invalid_refresh_token`. *(pass;
      baseline, invariant 7's rotation claim)*
@@ -517,7 +517,7 @@ Each sub-task states the probe, the command, the control that must hold, and the
   7. **Logout then reuse the refresh token** → 401. *(pass)*
   8. **Logout then reuse the access token** → expected 200, because `authentication-decision.md` records
      that stateless tokens are not revoked instantly and the revocation window is bounded by
-     `TUCANO_ACCESS_TOKEN_TTL`. Record as a pass entry **with the document cited**. It becomes a finding
+     `TATU_ACCESS_TOKEN_TTL`. Record as a pass entry **with the document cited**. It becomes a finding
      only if a document promises immediate access-token revocation, or if the default TTL is materially
      longer than the documented 15 minutes at the audited revision.
 - **Command.** `curl` chains against `$B`; keep each request and response in the report.
@@ -578,13 +578,13 @@ Each sub-task states the probe, the command, the control that must hold, and the
   `{id}` (projects, suites, cases, runs, configurations), `{case_id}`, `{step_index}`, `{version}`,
   `{filename}` (case attachments and step attachments). Hostile values: `../`, `..%2F..%2Fetc%2Fpasswd.json`,
   `..%5C..%5C`, `%2e%2e%2f`, an absolute path (`/etc/passwd`), a Windows absolute path, a NUL
-  (`%00`), a newline, a reserved name (`test_runs`, `milestones`, `configurations`, `.tucano.lock`,
+  (`%00`), a newline, a reserved name (`test_runs`, `milestones`, `configurations`, `.tatu.lock`,
   `CON`, `nul`), the empty string, `.`, `..`, `a/b`, `a\\b`, a 4 KiB value, and a unicode value with a
   combining mark and a normalization-confusable identifier.
 - **Command.**
   ```bash
   for v in '..' '..%2Fetc%2Fpasswd' '%2e%2e%2f' '/etc/passwd' '%00' 'a/b' 'a%5Cb' \
-           'test_runs' 'milestones' 'configurations' '.tucano.lock' '.' '..' '' "$(python3 -c 'print("a"*4096)')"; do
+           'test_runs' 'milestones' 'configurations' '.tatu.lock' '.' '..' '' "$(python3 -c 'print("a"*4096)')"; do
     for p in "/test_cases/$v" "/test_cases/$v/attachments" \
              "/test_cases/$v/steps/0/attachments/x" "/test_suites/$v" "/projects/$v" \
              "/test_runs/$v" "/milestones/$v" "/configurations/$v"; do
@@ -707,7 +707,7 @@ Each sub-task states the probe, the command, the control that must hold, and the
   `/auth/accounts`, `/data/auth/accounts.json`, `/../data/…`, `/_`, a `?file=`-style query) on both arms,
   and confirm there is no directory listing and no arbitrary-file read.
 - **Expected (control holds).** 404/405 for everything; `GET /auth/me` and the four session routes are the
-  only `/auth*` surface; nothing under `TUCANO_DATA_DIR/auth/` is retrievable.
+  only `/auth*` surface; nothing under `TATU_DATA_DIR/auth/` is retrievable.
 - **Evidence.** Pass entry naming the enumeration command. Any read is a finding (*GUI to storage* / *HTTP
   client to service*).
 
@@ -715,7 +715,7 @@ Each sub-task states the probe, the command, the control that must hold, and the
 
 **S1-14 — Auth-off parity**
 
-- **Probe.** Re-run S1-3, S1-6, S1-8, and S1-9 against arm A (`TUCANO_AUTH_REQUIRED` unset).
+- **Probe.** Re-run S1-3, S1-6, S1-8, and S1-9 against arm A (`TATU_AUTH_REQUIRED` unset).
 - **Expected (control holds).** Every guard returns before it resolves anything, so every route is
   reachable with no caller — this is the **shipped default**, not a defect in #176. Record the observation
   and hand it to #178 (S3-3), which owns the deployment-exposure finding. Do not write an S1 finding whose
@@ -795,7 +795,7 @@ current lines with `grep -n "fn validate_document_id\|fn validate_component\|fn 
 
 **2.3 What is the atomicity claim, exactly?** "Persistence publishes complete documents atomically; failed
 writes do not replace valid data." The mechanism, at the design revision:
-`src/storage/fs.rs:163` creates `directory.join(format!(".tucano-{}.tmp", unique_suffix()))`,
+`src/storage/fs.rs:163` creates `directory.join(format!(".tatu-{}.tmp", unique_suffix()))`,
 `:173` calls `file.sync_all()?`, `:174` calls `fs::rename(&temporary, destination)`. The same pattern guards
 attachment writes (`:606`) and revision writes (`:711`). **This design treats invariant 2 as satisfied by
 inspection and expects a pass entry** — the audit's job is to try to falsify it (S2-5) and to confirm the
@@ -816,7 +816,7 @@ and score it per §5, stating both adjustments in the finding (see S2-2 for the 
 
 **2.5 What counts as "concurrent" for invariant 2?** Two cases: (a) many HTTP writers to one document inside
 one replica; (b) two replicas against the **same** data directory. The lock is
-`self.root.join(".tucano.lock")` opened with an exclusive lock at `src/storage/fs.rs:36` and released at
+`self.root.join(".tatu.lock")` opened with an exclusive lock at `src/storage/fs.rs:36` and released at
 eight explicit `unlock` sites (`fs.rs:523/541`, `546/552`, `576/578`, `590/613`, `624/640`, `674/679`,
 `692/718`, `729/740`). The acquisition is a `File` guard and the release is a call, not RAII — so a failed
 operation must not wedge the volume. That is tested empirically (S2-9); the audit does not reason about it
@@ -834,7 +834,7 @@ and no file type other than `.json` is accepted in the project tree
 `::a_symlinked_project_folder_that_escapes_the_root_is_rejected`,
 `::a_symlinked_collection_directory_that_escapes_the_root_is_rejected`,
 `::the_project_tree_is_not_readable_by_a_non_json_file`-family assertions). A leftover
-`.tucano-<suffix>.tmp` is therefore expected to be inert: refuse-worthy if addressable, irrelevant if not.
+`.tatu-<suffix>.tmp` is therefore expected to be inert: refuse-worthy if addressable, irrelevant if not.
 **Resolved: it is a pass entry, and it becomes a finding only if a route can name it.**
 
 ### 3. Sub-tasks
@@ -928,7 +928,7 @@ and no file type other than `.json` is accepted in the project tree
 **S2-4 — Reserved names, separators, and degenerate identifiers**
 
 - **Probe.** Create projects, suites, and cases whose identifiers are `test_runs`, `milestones`,
-  `configurations`, `.tucano.lock`, `.tucano-1700000000000000000.tmp`, `CON`, `nul`, `aux`, `.`, `..`, `a/b`,
+  `configurations`, `.tatu.lock`, `.tatu-1700000000000000000.tmp`, `CON`, `nul`, `aux`, `.`, `..`, `a/b`,
   `a\\b`, `a%2Fb`, the empty string, whitespace only, a 4 KiB value, and a unicode value with a combining
   mark; then read the tree to see whether a reserved collection was shadowed or a document was written
   outside its case folder.
@@ -958,11 +958,11 @@ and no file type other than `.json` is accepted in the project tree
     docker start audit-b >/dev/null; sleep 1
     curl -s "$B/test_cases/TC-LOGIN-1" | python3 -c 'import json,sys; json.load(sys.stdin); print("valid")'
   done
-  docker exec audit-b find /data -name '.tucano-*.tmp' -printf '%s %p\n'
-  curl -s -o /dev/null -w '%{http_code}\n' "$B/test_cases/%2Etucano-1700000000000000000%2Etmp"
+  docker exec audit-b find /data -name '.tatu-*.tmp' -printf '%s %p\n'
+  curl -s -o /dev/null -w '%{http_code}\n' "$B/test_cases/%2Etatu-1700000000000000000%2Etmp"
   ```
 - **Expected (control holds).** Every read after every kill returns a **complete, parseable** document equal
-  to one of the two submitted versions — never a truncated or mixed one. Leftover `.tucano-*.tmp` files are
+  to one of the two submitted versions — never a truncated or mixed one. Leftover `.tatu-*.tmp` files are
   inert and unaddressable.
 - **Evidence.** **Pass entry for invariant 2**, quoting the invariant, with the log of ten kills and the
   validity results. **Pre-committed non-finding:** the absence of a parent-directory `fsync` is recorded as
@@ -1114,7 +1114,7 @@ and no file type other than `.json` is accepted in the project tree
 
 **S2-14 — The service exposes no filesystem path, and `auth/` is unreachable**
 
-- **Probe.** Confirm that no route lists, reads, or writes anything under `TUCANO_DATA_DIR/auth/`, and that
+- **Probe.** Confirm that no route lists, reads, or writes anything under `TATU_DATA_DIR/auth/`, and that
   no listing route lets a caller enumerate the tree.
 - **Expected (control holds).** Only `GET /auth/me` and the session routes touch `/auth*`; the auth store
   files are never served.
@@ -1125,11 +1125,11 @@ and no file type other than `.json` is accepted in the project tree
 
 **S2-15 — The configuration-file boundary, storage side** *(bounded; the rest belongs to #178)*
 
-- **Probe.** With `TUCANO_CONFIG_FILE` naming a file mounted **read-only** into a scratch container: a
+- **Probe.** With `TATU_CONFIG_FILE` naming a file mounted **read-only** into a scratch container: a
   well-formed file resolves; an unknown key, a bad `version`, a malformed document, and a missing file each
   **refuse startup** with an error that names the setting and never the value; the running service never
   writes the file (invariant 9).
-- **Command.** `docker run --rm -v /tmp/audit-178/config.json:/etc/tucano/config.json:ro -e TUCANO_CONFIG_FILE=/etc/tucano/config.json …`
+- **Command.** `docker run --rm -v /tmp/audit-178/config.json:/etc/tatu/config.json:ro -e TATU_CONFIG_FILE=/etc/tatu/config.json …`
   then `docker diff` and an in-container `touch`.
 - **Expected (control holds).** Refusal on every bad input (invariant 8), a write-free runtime (invariant 9),
   and no value in any error text.
@@ -1209,7 +1209,7 @@ Both edits are recorded in report §2 as deviations, together with the shipped f
 exposure consequence (S3-3) is then measured on the copy **and** asserted against the shipped file's text:
 the shipped `ports:` entry is `- "3100:3000"` with **no host-address prefix**, which Docker publishes on
 `0.0.0.0` by default. Capture the exact line number at audit time:
-`grep -n "ports:\|3100:3000\|TUCANO_AUTH_REQUIRED\|read_only\|tmpfs\|no-new-privileges\|cap_drop\|healthcheck" docker-compose.yml`.
+`grep -n "ports:\|3100:3000\|TATU_AUTH_REQUIRED\|read_only\|tmpfs\|no-new-privileges\|cap_drop\|healthcheck" docker-compose.yml`.
 
 **2.2 What is the adversary for S3?** "An adversary who can reach the HTTP listener" — which for S3 means
 **any host that can route to the published port**, not merely a process on the same machine. The audit must
@@ -1220,13 +1220,13 @@ unauthenticated request is the whole reproduction.
 
 **2.3 What counts as "default configuration"?** The shipped `docker-compose.yml` run with
 `docker compose up -d --build`, and a bare `cargo run`. Both are named by §5's escalation rule. The shipped
-file does **not** set `TUCANO_AUTH_REQUIRED`, so the default is the authentication-off arm — the API's own
+file does **not** set `TATU_AUTH_REQUIRED`, so the default is the authentication-off arm — the API's own
 `authentication-decision.md` says "The API must **not** be exposed beyond a trusted network until this is
 implemented", and requirement 5 repeats it. That the project's own documents state the constraint is what
 makes publishing the port a defect rather than a preference.
 
 **2.4 What must the secret path keep secret, and what is normative?** The `JWT secret` (or
-`TUCANO_JWT_SECRET_FILE`'s content), the bootstrap password, and any configuration-file secret. Normative:
+`TATU_JWT_SECRET_FILE`'s content), the bootstrap password, and any configuration-file secret. Normative:
 invariant 7 (never in the clear), invariant 8 (resolved once at startup; an unresolvable configuration is a
 refusal, never a warning and never a plaintext fallback), the *Secret disclosure through the file* abuse
 case ("Keep a secret supplied by file out of the image, out of `docker inspect`, out of logs, errors, and
@@ -1242,7 +1242,7 @@ does not score the pending encryption.
 `PREVIOUS` before touching anything; it is the rollback target."; "Rollback re-deploys `PREVIOUS` and re-runs
 the checks; it never moves a tag."; "With Compose, restore the previously pinned image tag and recreate only
 the `api` service"; and "`PREVIOUS` and `CANDIDATE` — the exact immutable tags." The shipped Compose file
-instead builds locally: `image: tucano-test-api:local` with `build: .`. Whether the documented procedure has
+instead builds locally: `image: tatu-test-api:local` with `build: .`. Whether the documented procedure has
 a local equivalent is measured (S3-4), not assumed.
 
 **2.6 Which CI claims are in scope, and what is already covered?** `scanning-policy.md` claims four
@@ -1271,7 +1271,7 @@ SBOM is never attached to the image. Re-read
     CapAdd={{.HostConfig.CapAdd}} CapDrop={{.HostConfig.CapDrop}}
     SecOpt={{.HostConfig.SecurityOpt}} Tmpfs={{.HostConfig.Tmpfs}} Privileged={{.HostConfig.Privileged}}' audit-178-api-1
   ```
-- **Expected (control holds).** `User` is `tucano`/`10001` (the Dockerfile's `useradd --system --uid 10001`)
+- **Expected (control holds).** `User` is `tatu`/`10001` (the Dockerfile's `useradd --system --uid 10001`)
   and not `root`; `ReadonlyRootfs=true` (`read_only: true`); `SecurityOpt` contains
   `no-new-privileges:true`; `/tmp` is a tmpfs; the data mount is the only writable mount.
 - **Expected (probable actual).** `CapDrop` is **empty** while the stack applies no `cap_drop`. The
@@ -1290,21 +1290,21 @@ SBOM is never attached to the image. Re-read
   1. Search the built image's `Config.Env`, `Config.Labels`, `Config.Cmd`, and history for the JWT secret and
      the bootstrap password used in the scratch stack.
   2. Run an arm with the secret supplied by file rather than by value:
-     `-e TUCANO_JWT_SECRET_FILE=/run/secrets/jwt` with a read-only mount, and confirm the value never appears
+     `-e TATU_JWT_SECRET_FILE=/run/secrets/jwt` with a read-only mount, and confirm the value never appears
      in `docker inspect`, in the image layer, in `docker logs`, or in any response.
   3. Supply a **too-short** secret (31 bytes) and confirm the service **refuses to start** rather than
      warning or defaulting (invariant 8), and that the error names the setting and never the value.
-  4. Supply both `TUCANO_JWT_SECRET` and `TUCANO_JWT_SECRET_FILE` and a configuration-file secret and
+  4. Supply both `TATU_JWT_SECRET` and `TATU_JWT_SECRET_FILE` and a configuration-file secret and
      confirm the per-key precedence and the conflict refusal.
 - **Command.**
   ```bash
   docker history --no-trunc "$AUDIT_IMAGE" | grep -i 'secret\|password\|jwt' || echo "no secret in history"
   docker inspect audit-178-api-1 --format '{{json .Config.Env}}' | tr ',' '\n' | grep -i 'jwt\|password' || echo "no secret in Env"
   docker logs audit-178-api-1 | grep -i "$AUDIT_JWT_SECRET" || echo "no secret in logs"
-  docker run --rm -e TUCANO_AUTH_REQUIRED=true -e TUCANO_JWT_SECRET=tooshort… "$AUDIT_IMAGE" ; echo "exit=$?"
+  docker run --rm -e TATU_AUTH_REQUIRED=true -e TATU_JWT_SECRET=tooshort… "$AUDIT_IMAGE" ; echo "exit=$?"
   ```
 - **Expected (control holds).** No secret anywhere outside the process environment; the file path works from
-  a read-only mount; a short secret is a startup refusal naming `TUCANO_JWT_SECRET`; no value in any error
+  a read-only mount; a short secret is a startup refusal naming `TATU_JWT_SECRET`; no value in any error
   or log.
 - **Evidence.** A per-channel table (Env / labels / history / logs / responses / errors) with each result,
   pass entries for the refusals, and `F-178-<n>` for any leaked value (severity: a leaked secret is Severe
@@ -1314,7 +1314,7 @@ SBOM is never attached to the image. Re-read
 
 **S3-3 — Network exposure of the shipped default (highest-probability S3 finding)**
 
-- **Probe.** With the scratch stack (2.1) running the **shipped** posture — `TUCANO_AUTH_REQUIRED` unset,
+- **Probe.** With the scratch stack (2.1) running the **shipped** posture — `TATU_AUTH_REQUIRED` unset,
   the shipped all-interfaces publish — determine the bound address, then make one unauthenticated request
   from a host that is not the machine's loopback.
 - **Command.**
@@ -1328,8 +1328,8 @@ SBOM is never attached to the image. Re-read
        -H 'content-type: application/json' -d '{"id":"audit-probe.json","name":"audit probe"}'
   ```
   Then assert the same against the **shipped file** rather than the copy:
-  `grep -n 'ports:' -A2 docker-compose.yml` and the `TUCANO_AUTH_REQUIRED` absence:
-  `grep -n 'TUCANO_AUTH_REQUIRED' docker-compose.yml || echo "auth is not enabled by the shipped stack"`.
+  `grep -n 'ports:' -A2 docker-compose.yml` and the `TATU_AUTH_REQUIRED` absence:
+  `grep -n 'TATU_AUTH_REQUIRED' docker-compose.yml || echo "auth is not enabled by the shipped stack"`.
 - **Expected (control holds).** The published port is reachable only from the operator's trust boundary, and
   no unauthenticated request returns data or writes it.
 - **Expected (probable actual).** `0.0.0.0` publish plus an unauthenticated `200` carrying project data and
@@ -1344,7 +1344,7 @@ SBOM is never attached to the image. Re-read
   documents a "trusted local network" expectation: the defect is not that auth is optional, it is that the
   shipped default publishes the listener on every interface while leaving the control that makes it safe
   turned off, so the safe configuration is the one an operator has to discover. `Suggested fix`: publish on
-  `127.0.0.1` by default and/or set `TUCANO_AUTH_REQUIRED=true` in the Compose file, and state the
+  `127.0.0.1` by default and/or set `TATU_AUTH_REQUIRED=true` in the Compose file, and state the
   expectation in the README. CWE-306 (missing authentication for a critical function) or CWE-1327 (binding
   to an unrestricted IP address) — pick the one the observed mechanism matches.
 - **Evidence.** `F-178-1` with `docker port`, `ss`, the raw curl response, the two `grep` outputs from the
@@ -1363,14 +1363,14 @@ SBOM is never attached to the image. Re-read
   PREVIOUS=$(docker inspect --format '{{.Image}}' audit-178-api-1); echo "$PREVIOUS"
   # change a byte in the source, rebuild, then inspect what happened to the tag:
   docker compose -p audit-178 up -d --build
-  docker image ls --filter reference='tucano-test-api' --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedSince}}'
+  docker image ls --filter reference='tatu-test-api' --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.CreatedSince}}'
   docker image ls --filter dangling=true
   docker compose -p audit-178 up -d api      # the runbook's "restore the previously pinned image tag"
   ```
 - **Expected (control holds).** The runbook's Compose instruction — "restore the previously pinned image
   tag and recreate only the `api` service" — is executable with an immutable tag, and the restored container
   runs the previous image.
-- **Expected (probable actual).** `image: tucano-test-api:local` + `build: .` means each `--build` retags
+- **Expected (probable actual).** `image: tatu-test-api:local` + `build: .` means each `--build` retags
   the single local name; the previous image id becomes `<none>`, so `PREVIOUS` is not addressable by tag and
   the documented rollback has no local equivalent. Score it: the defect is a process/documentation control
   that does not hold. Recommended **Low** (Difficult × Limited: it needs a failed release *and* an operator
@@ -1485,15 +1485,15 @@ SBOM is never attached to the image. Re-read
 
 **S3-9 — Configuration boundary at the deployment edge**
 
-- **Probe.** With the config file read-only mounted and `TUCANO_CONFIG_FILE` set: a good file resolves; an
+- **Probe.** With the config file read-only mounted and `TATU_CONFIG_FILE` set: a good file resolves; an
   unknown key, a bad `version`, a malformed document, and a missing file each refuse startup naming the
   setting and never the value; the running service never writes the file; and a config-supplied secret is
   returned in no response and no log.
 - **Command.**
   ```bash
-  docker run --rm -v /tmp/audit-178/conf:/conf:ro -e TUCANO_CONFIG_FILE=/conf/config.json "$AUDIT_IMAGE"; echo "exit=$?"
-  # repeat with a bad key, a bad version, a truncated file, and TUCANO_CONFIG_FILE pointing at nothing
-  docker run -d --name audit-conf -v /tmp/audit-178/conf:/conf:ro -e TUCANO_CONFIG_FILE=/conf/config.json …
+  docker run --rm -v /tmp/audit-178/conf:/conf:ro -e TATU_CONFIG_FILE=/conf/config.json "$AUDIT_IMAGE"; echo "exit=$?"
+  # repeat with a bad key, a bad version, a truncated file, and TATU_CONFIG_FILE pointing at nothing
+  docker run -d --name audit-conf -v /tmp/audit-178/conf:/conf:ro -e TATU_CONFIG_FILE=/conf/config.json …
   docker diff audit-conf ; docker exec audit-conf sh -lc 'touch /conf/x' ; echo "exit=$?"
   docker logs audit-conf | grep -i "$AUDIT_JWT_SECRET" || echo "no value in logs"
   ```
@@ -1609,18 +1609,18 @@ change; the audit PRs contain documentation only.
 
 **Related tickets.**
 
-- **[#179](https://github.com/TucanoTechnology/TucanoTestAPI/issues/179) — S4 dependencies and supply
+- **[#179](https://github.com/TatuHQ/TatuTestAPI/issues/179) — S4 dependencies and supply
   chain: CLOSED.** Its report, `docs/security/audit-s4-dependencies-and-supply-chain.md`, is the accepted
   report-PR precedent this design copies, and its five findings are the supply-chain floor for #178's CI
   review. Its report's counts (46 paths / 67 operations at revision `61b02b92…`) are **stale** — the
   contract at this design's revision has 49 paths / 71 operations, and every audit re-derives its own
   numbers from `openapi.json` at its own revision rather than copying S4's.
-- **[#180](https://github.com/TucanoTechnology/TucanoTestAPI/issues/180) — triage of the audit's findings:
+- **[#180](https://github.com/TatuHQ/TatuTestAPI/issues/180) — triage of the audit's findings:
   BLOCKED.** It is labelled `model:mid` and cannot start until the S1, S2, and S3 reports exist. It consumes
   all three reports, assigning each finding an owner and a decision (fix, accept, or defer), and it needs
   the same two-arm seeded target plus whatever fixture a specific finding's reproduction requires — each
   finding must carry its reproduction with it, which is why §4's evidence discipline is not optional.
-- **[#166](https://github.com/TucanoTechnology/TucanoTestAPI/issues/166) — the epic — closes only when all
+- **[#166](https://github.com/TatuHQ/TatuTestAPI/issues/166) — the epic — closes only when all
   of #176, #177, #178, and #180 are closed.** Its own definition of done adds two things no single S1/S2/S3
   report satisfies: a consolidated summary under `docs/security/`, linked from the README documentation
   table, and an update to `threat-model.md` if the trust model changed. If an audit finds a boundary that

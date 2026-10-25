@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Seed script for Tucano Test API (issue #193).
+ * Seed script for TatuTest API (issue #193).
  *
  * Builds the full demo environment specified by
  * `docs/testing/seed-dataset-spec.md` against a running deployment. Every
@@ -13,21 +13,21 @@
  *
  * Usage:
  *   node scripts/seed.mjs [BASE_URL]
- *   TUCANO_API_URL=http://localhost:3000 node scripts/seed.mjs
+ *   TATU_API_URL=http://localhost:3000 node scripts/seed.mjs
  *
  * The deployment must be started with auth enforced and a bootstrap account,
  * because the sequence signs in as it and creates projects::
  *
- *   TUCANO_AUTH_REQUIRED=true
- *   TUCANO_JWT_SECRET=<at least 32 bytes>
- *   TUCANO_BOOTSTRAP_USERNAME=admin
- *   TUCANO_BOOTSTRAP_PASSWORD=<password>
+ *   TATU_AUTH_REQUIRED=true
+ *   TATU_JWT_SECRET=<at least 32 bytes>
+ *   TATU_BOOTSTRAP_USERNAME=admin
+ *   TATU_BOOTSTRAP_PASSWORD=<password>
  *
  * Environment:
- *   TUCANO_BOOTSTRAP_USERNAME / TUCANO_BOOTSTRAP_PASSWORD  sign-in credentials
- *   TUCANO_SEED_VIEWER_PASSWORD                            password for the
+ *   TATU_BOOTSTRAP_USERNAME / TATU_BOOTSTRAP_PASSWORD  sign-in credentials
+ *   TATU_SEED_VIEWER_PASSWORD                            password for the
  *                                                          seeded `viewer` account
- *   TUCANO_SEED_EDITOR_PASSWORD                            password for the
+ *   TATU_SEED_EDITOR_PASSWORD                            password for the
  *                                                          seeded `editor` account
  *
  * The seed is not idempotent, by design: placing a case onto an identifier the
@@ -92,7 +92,7 @@ const SEED_ACCOUNTS = [
     username: 'viewer',
     role: 'owner',
     project: 'checkout.json',
-    passwordEnv: 'TUCANO_SEED_VIEWER_PASSWORD',
+    passwordEnv: 'TATU_SEED_VIEWER_PASSWORD',
     passwordDefault: 'viewer-seed-password',
     password: null,
   },
@@ -100,7 +100,7 @@ const SEED_ACCOUNTS = [
     username: 'editor',
     role: 'editor',
     project: 'checkout.json',
-    passwordEnv: 'TUCANO_SEED_EDITOR_PASSWORD',
+    passwordEnv: 'TATU_SEED_EDITOR_PASSWORD',
     passwordDefault: 'editor-seed-password',
     password: null,
   },
@@ -108,7 +108,7 @@ const SEED_ACCOUNTS = [
 
 const candidateUrls = [
   process.argv[2],
-  process.env.TUCANO_API_URL,
+  process.env.TATU_API_URL,
   process.env.API_URL,
   'http://localhost:3100',
   'http://localhost:8080/api',
@@ -244,11 +244,11 @@ async function assertClear() {
 // --- steps ------------------------------------------------------------------
 
 async function step0Session() {
-  const username = process.env.TUCANO_BOOTSTRAP_USERNAME;
-  const password = process.env.TUCANO_BOOTSTRAP_PASSWORD;
+  const username = process.env.TATU_BOOTSTRAP_USERNAME;
+  const password = process.env.TATU_BOOTSTRAP_PASSWORD;
   if (!username || !password) {
     throw new Error(
-      'set TUCANO_BOOTSTRAP_USERNAME and TUCANO_BOOTSTRAP_PASSWORD; the seed signs in as the ' +
+      'set TATU_BOOTSTRAP_USERNAME and TATU_BOOTSTRAP_PASSWORD; the seed signs in as the ' +
         'bootstrap account and starts with the deployment configured for auth (see the header)',
     );
   }
@@ -674,7 +674,7 @@ async function step10MilestoneAndDuplicate() {
  * a *durable* second home is deliberately ambiguous data, the contract tests'
  * territory, not what a person exploring the app should be handed (the GUI's
  * document routes address cases by bare id, and the parent-scoped siblings
- * TucanoTestAPI#462 will add are not there yet). So each copy below is
+ * TatuTestAPI#462 will add are not there yet). So each copy below is
  * copied and then removed again, the copy and the target parent's scoped
  * delete both proven; moves simply move, which never duplicates an id.
  *
@@ -751,16 +751,16 @@ async function step11Placement() {
 
 /**
  * Writes the seed's accounts and grants through the server binary's AuthStore
- * path (spec §5). The API has no route for this, so `TUCANO_SEED_AUTH_CMD` is
+ * path (spec §5). The API has no route for this, so `TATU_SEED_AUTH_CMD` is
  * the one exception to "the generator drives the API"; it runs on the volume the
  * server reads.
  */
 async function stepAuth() {
-  const cli = process.env.TUCANO_SEED_AUTH_CMD;
+  const cli = process.env.TATU_SEED_AUTH_CMD;
   if (!cli) {
     console.log(
-      '  ℹ️  skipping auth seeding: set TUCANO_SEED_AUTH_CMD to the server binary ' +
-        '(e.g. `target/release/tucano-test seed-auth`) to create the viewer and editor ' +
+      '  ℹ️  skipping auth seeding: set TATU_SEED_AUTH_CMD to the server binary ' +
+        '(e.g. `target/release/tatu-test seed-auth`) to create the viewer and editor ' +
         'accounts and their grants',
     );
     return;
@@ -770,7 +770,7 @@ async function stepAuth() {
     const password = process.env[account.passwordEnv] || account.passwordDefault;
     const args = ['--username', account.username, '--password', password];
     args.push('--grant', `${account.project}=${account.role}`);
-    // `TUCANO_SEED_AUTH_CMD` is a command *line* (it may carry its own
+    // `TATU_SEED_AUTH_CMD` is a command *line* (it may carry its own
     // `VAR=value` prefix), so it is handed to a shell. Everything the script adds
     // to it — the username, the password, the project ids and roles — is quoted.
     const quoted = args.map((arg) => `'${String(arg).replaceAll("'", `'\\''`)}'`).join(' ');
@@ -826,7 +826,7 @@ async function stepAuth() {
 
 async function runSeed() {
   baseUrl = await resolveBaseUrl();
-  console.log(`\n🌱 Seeding Tucano Test API at ${baseUrl}\n`);
+  console.log(`\n🌱 Seeding TatuTest API at ${baseUrl}\n`);
 
   // The clear check reads the collections, so it runs after signing in.
   await step0Session();

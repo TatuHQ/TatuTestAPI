@@ -1,6 +1,6 @@
-# AI Agent Rules — Tucano Test API
+# AI Agent Rules — TatuTest API
 
-Rules and guidelines for AI agents working on the Tucano Test API.
+Rules and guidelines for AI agents working on the TatuTest API.
 
 ## Shared rules
 
@@ -8,9 +8,9 @@ Organisation-wide rules live in [`AgentRules/`](AgentRules/) and apply to every 
 Read them before making changes. This file records only what is specific to this repository.
 
 **`AgentRules/` is synced automatically from
-[TucanoAgentRules](https://github.com/TucanoTechnology/TucanoAgentRules), the single source of
-truth shared with [TucanoTestGUI](https://github.com/TucanoTechnology/TucanoTestGUI). Do not edit
-files under `AgentRules/` in this repository — submit changes against TucanoAgentRules instead and
+[TatuAgentRules](https://github.com/TatuHQ/TatuAgentRules), the single source of
+truth shared with [TatuTestGUI](https://github.com/TatuHQ/TatuTestGUI). Do not edit
+files under `AgentRules/` in this repository — submit changes against TatuAgentRules instead and
 they will arrive here as an automated pull request.**
 
 | Area | Rules |
@@ -28,25 +28,25 @@ they will arrive here as an automated pull request.**
 | Browser and end-to-end tests | [`AgentRules/test/ui.md`](AgentRules/test/ui.md) |
 | Principles, conflicts and exceptions | [`AgentRules/generic/principles.md`](AgentRules/generic/principles.md) |
 
-Related repository: [TucanoTestGUI](https://github.com/TucanoTechnology/TucanoTestGUI).
+Related repository: [TatuTestGUI](https://github.com/TatuHQ/TatuTestGUI).
 
 ---
 
 ## Core Project Philosophy
 
-**Tucano Test is a file-based test case management system.** All test data (projects, test cases,
+**TatuTest is a file-based test case management system.** All test data (projects, test cases,
 test suites, test runs, and attachments) is stored as JSON or files on the filesystem. There is no
 database. The API is designed to be portable via a production container and persistent volume.
 
 When making decisions about features, architecture, or implementation:
 
-- Preserve the file-based approach — all CRUD operations read/write JSON files below `TUCANO_DATA_DIR`.
+- Preserve the file-based approach — all CRUD operations read/write JSON files below `TATU_DATA_DIR`.
 - **Storage mirrors the conceptual organisation.** A project is a folder that contains its test
   suites and may also contain test cases directly. A test suite is a folder, always inside a
   project, that contains its test cases. A test case is a folder — inside a project or inside a
   suite — holding its JSON document, steps, and supplementary files (e.g. attachments). The API is
   the only actor that creates, edits, deletes, duplicates, and links these folders — nothing below
-  `TUCANO_DATA_DIR` is modified outside the API. See the storage concept in `README.md`.
+  `TATU_DATA_DIR` is modified outside the API. See the storage concept in `README.md`.
 - **Every case and suite has one real home; a real parent is required at creation.** A suite is
   created inside a project, a case inside a project or a suite. Nothing is created in a standalone
   top-level pool, and the on-disk tree mirrors the homes: a suite folder lives under its project, a
@@ -82,13 +82,13 @@ When making decisions about features, architecture, or implementation:
 
 ### File structure
 
-- Layered source: `src/models.rs` (documents), `src/storage/` (the `Repository` trait, `storage/fs/` for the filesystem implementation, `layout.rs` for the path rules), `src/config/` (the startup configuration file, `secret.rs` for secret files), `src/domain/` (rules behind `TestService`, service halves in `domain/service/`), `src/api/` (HTTP: one module per resource, plus `crud.rs`, `error.rs`, `access.rs`, `auth.rs`, `guardrails.rs`, `metrics.rs`, `redact.rs`, `request_id.rs`); the README's layer table is the exhaustive version, and `check-docs-links` keeps every module named
+- Layered source: `src/models.rs` (documents), `src/storage/` (the `Repository` trait, `storage/fs/` for the filesystem implementation, `layout.rs` for the path rules), `src/config/` (the startup configuration file, `secret.rs` for secret files), `src/domain/` (rules behind `TestService`, service halves in `domain/service/`), `src/api/` (HTTP: one module per resource, plus `crud.rs`, `error.rs`, `access.rs`, `auth.rs`, `guardrails.rs`, `metrics.rs`, `redact.rs`, `request_id.rs`, `workflows.rs`); the README's layer table is the exhaustive version, and `check-docs-links` keeps every module named
 - Compatibility shim: `src/repository.rs` re-exports the storage types for existing imports
 - Library target: `src/lib.rs`; binary entry point: `src/main.rs`
 - OpenAPI contract: `openapi.json`; interactive UI: `swagger.html`
 - Unit tests: alongside the relevant module
 - Integration tests: `tests/`, one suite per API area, with shared helpers in `tests/common/mod.rs`
-- Runtime data: `TUCANO_DATA_DIR` (mounted persistent volume, never committed)
+- Runtime data: `TATU_DATA_DIR` (mounted persistent volume, never committed)
 
 ### Project-specific data rules
 
@@ -160,7 +160,7 @@ The container listens on `3000`; the host port is what `docker-compose.yml` publ
 ### Volume mount
 
 - Compose bind mount: host `./data` → Container: `/data` (Docker creates `./data` on first run)
-- Configuration: `TUCANO_DATA_DIR=/data`
+- Configuration: `TATU_DATA_DIR=/data`
 - Data persists across container restarts
 - Files are plain JSON — inspectable and editable on host, and kept out of version control: the
   `.gitignore` excludes `/data/*`
@@ -228,7 +228,7 @@ matching `docs/` category and link it from the README documentation table.
 
 ## Project Board
 
-**Project board:** https://github.com/orgs/TucanoTechnology/projects/3/views/1
+**Project board:** https://github.com/orgs/TatuHQ/projects/3/views/1
 
 Ticket creation, update and closure rules are defined in `AgentRules/project-management/`.
 

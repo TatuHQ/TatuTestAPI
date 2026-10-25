@@ -1,6 +1,6 @@
 # Projects, suites, and cases
 
-Tucano Test stores three things as containers: a **project** holds all the other entities, a
+TatuTest stores three things as containers: a **project** holds all the other entities, a
 **suite** groups related cases inside a project, and a **case** is the individual test. This page
 explains that hierarchy, how creation works when the parent lives in the route, and how membership
 is stored — because the last one surprises people who expect an array in the document.
@@ -11,7 +11,7 @@ codes, open the Swagger UI at `/api-docs` or read [`openapi.json`](../../openapi
 ## The shape of the tree
 
 ```text
-TUCANO_DATA_DIR/
+TATU_DATA_DIR/
 └── projects/
     └── <project>/
         ├── project.json                 project details

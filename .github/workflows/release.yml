@@ -69,7 +69,7 @@ jobs:
         # digest this job pushed, so an empty `steps.build.outputs.digest` —
         # a `push:` turned off on the build step, or a build-push-action major
         # that stops emitting `digest` — would degenerate the reference to
-        # `ghcr.io/tucanotechnology/tucanotestapi@`, and trivy would fail on
+        # `ghcr.io/tatuhq/tatutestapi@`, and trivy would fail on
         # an unparseable reference without naming the step that produced it.
         # This step owns the diagnosis: it stops the job before trivy runs,
         # with a message that says the build step published no digest.
@@ -111,7 +111,7 @@ jobs:
         # registry cache volume the container jobs already warm.
         run: |
           docker run --rm -v "$PWD:/src" -w /src \
-            -v tucanotestapi-cargo-registry:/usr/local/cargo/registry \
+            -v tatutestapi-cargo-registry:/usr/local/cargo/registry \
             rust:1.98.0-bookworm@sha256:82150a52ec202c1b14d7817e14516c392bb7f5cfebd88f1ed531cb37ebd39922 \
             bash -c 'cargo install cargo-cyclonedx --locked && cargo cyclonedx --format json --override-filename sbom'
       - name: Prove the SBOM lists the crate's components

@@ -3,7 +3,7 @@
 //! These assertions are made against a whole-process capture of every span and
 //! event the router emits, installed once for this test binary. That is a
 //! stronger claim than asserting on a single log line: the API logs from
-//! exactly two places — the `http.request` span and the `tucano.audit` event —
+//! exactly two places — the `http.request` span and the `tatu.audit` event —
 //! so "the capture never holds this secret" is a statement about everything the
 //! deployment can write, not about one line of it.
 
@@ -23,12 +23,12 @@ use axum::{
     http::{Request, StatusCode},
 };
 use serde_json::json;
+use tatu_test::{api::redact::REDACTED, domain::AUDIT_TARGET};
 use tracing::{
     Event, Metadata, Subscriber,
     field::{Field, Visit},
     span::{Attributes, Id, Record},
 };
-use tucano_test::{api::redact::REDACTED, domain::AUDIT_TARGET};
 
 /// The span every request opens, named by `TraceLayer`'s configuration.
 const REQUEST_SPAN: &str = "http.request";
@@ -268,11 +268,11 @@ async fn metrics_report_what_the_deployment_served() {
     );
 
     let body = String::from_utf8(bytes).expect("the exposition format is text");
-    assert!(body.contains("# HELP tucano_http_requests_total Requests served"));
-    assert!(body.contains("# TYPE tucano_http_requests_total counter"));
+    assert!(body.contains("# HELP tatu_http_requests_total Requests served"));
+    assert!(body.contains("# TYPE tatu_http_requests_total counter"));
     assert!(
         body.contains(
-            "tucano_http_requests_total{method=\"GET\",resource=\"health\",status=\"2xx\"} 1\n"
+            "tatu_http_requests_total{method=\"GET\",resource=\"health\",status=\"2xx\"} 1\n"
         ),
         "the served request is missing from the counters: {body}"
     );
@@ -492,19 +492,19 @@ const OBS_USER_ID: &str = "obs-user-1";
 /// one known account.
 fn enforcing_app() -> (tempfile::TempDir, axum::Router) {
     let directory = tempfile::TempDir::new().expect("temp dir");
-    let repository = tucano_test::repository::FileRepository::new(directory.path()).expect("repo");
-    let store = tucano_test::auth::AuthStore::new(directory.path()).expect("auth store");
+    let repository = tatu_test::repository::FileRepository::new(directory.path()).expect("repo");
+    let store = tatu_test::auth::AuthStore::new(directory.path()).expect("auth store");
     store
-        .insert_user(&tucano_test::auth::User {
+        .insert_user(&tatu_test::auth::User {
             id: OBS_USER_ID.to_owned(),
             username: OBS_USERNAME.to_owned(),
-            password_hash: tucano_test::auth::hash_password(OBS_PASSWORD).expect("hash"),
+            password_hash: tatu_test::auth::hash_password(OBS_PASSWORD).expect("hash"),
             system_admin: true,
             created_at: 1_700_000_000,
             refresh_tokens: Vec::new(),
         })
         .expect("seed account");
-    let config = tucano_test::auth::AuthConfig {
+    let config = tatu_test::auth::AuthConfig {
         required: true,
         jwt_secret: Some(OBS_SECRET.to_vec()),
         access_ttl: std::time::Duration::from_secs(900),
@@ -514,9 +514,9 @@ fn enforcing_app() -> (tempfile::TempDir, axum::Router) {
     };
     (
         directory,
-        tucano_test::api::router(
+        tatu_test::api::router(
             repository,
-            tucano_test::api::auth::AuthState::new(store, config),
+            tatu_test::api::auth::AuthState::new(store, config),
         ),
     )
 }

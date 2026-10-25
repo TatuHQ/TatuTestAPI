@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Teardown script for Tucano Test API (issue #194).
+ * Teardown script for TatuTest API (issue #194).
  *
  * Removes exactly the demo environment `scripts/seed.mjs` created, and nothing
  * else, following the teardown scope of `docs/testing/seed-dataset-spec.md` §4:
@@ -31,23 +31,23 @@
  *
  * Usage:
  *   node scripts/teardown.mjs [BASE_URL]
- *   TUCANO_API_URL=http://localhost:3000 node scripts/teardown.mjs
+ *   TATU_API_URL=http://localhost:3000 node scripts/teardown.mjs
  *
  * The deployment must be reachable and authenticated the same way the seed was,
  * because teardown signs in as the bootstrap account:
  *
- *   TUCANO_BOOTSTRAP_USERNAME=admin
- *   TUCANO_BOOTSTRAP_PASSWORD=<password>
+ *   TATU_BOOTSTRAP_USERNAME=admin
+ *   TATU_BOOTSTRAP_PASSWORD=<password>
  *
  * Environment:
- *   TUCANO_BOOTSTRAP_USERNAME / TUCANO_BOOTSTRAP_PASSWORD  sign-in credentials
- *   TUCANO_API_URL                                          base URL, when no argument
- *   TUCANO_SEED_VIEWER_USERNAME                             which account to remove (default
+ *   TATU_BOOTSTRAP_USERNAME / TATU_BOOTSTRAP_PASSWORD  sign-in credentials
+ *   TATU_API_URL                                          base URL, when no argument
+ *   TATU_SEED_VIEWER_USERNAME                             which account to remove (default
  *                                                          `viewer`); the seed always writes
  *                                                          `viewer`, so a name that is not the
  *                                                          seed's is checked against it
- *   TUCANO_SEED_EDITOR_USERNAME                             the same, for `editor`
- *   TUCANO_UNSEED_AUTH_CMD                                  command line that removes the
+ *   TATU_SEED_EDITOR_USERNAME                             the same, for `editor`
+ *   TATU_UNSEED_AUTH_CMD                                  command line that removes the
  *                                                          account and its grants; when unset
  *                                                          that step is reported as not run
  *
@@ -71,12 +71,12 @@ const PROJECTS_TO_REMOVE = ["checkout.json", "payments.json"];
  */
 const SEED_ACCOUNTS = [
   {
-    usernameEnv: "TUCANO_SEED_VIEWER_USERNAME",
+    usernameEnv: "TATU_SEED_VIEWER_USERNAME",
     usernameDefault: "viewer",
     grantProject: "checkout.json",
   },
   {
-    usernameEnv: "TUCANO_SEED_EDITOR_USERNAME",
+    usernameEnv: "TATU_SEED_EDITOR_USERNAME",
     usernameDefault: "editor",
     grantProject: "checkout.json",
   },
@@ -156,7 +156,7 @@ const CASES = [
 
 const candidateUrls = [
   process.argv[2],
-  process.env.TUCANO_API_URL,
+  process.env.TATU_API_URL,
   process.env.API_URL,
   "http://localhost:3100",
   "http://localhost:8080/api",
@@ -292,11 +292,11 @@ async function listed(collectionPath, id) {
 // --- steps ------------------------------------------------------------------
 
 async function step0Session() {
-  const username = process.env.TUCANO_BOOTSTRAP_USERNAME;
-  const password = process.env.TUCANO_BOOTSTRAP_PASSWORD;
+  const username = process.env.TATU_BOOTSTRAP_USERNAME;
+  const password = process.env.TATU_BOOTSTRAP_PASSWORD;
   if (!username || !password) {
     throw new Error(
-      "set TUCANO_BOOTSTRAP_USERNAME and TUCANO_BOOTSTRAP_PASSWORD; teardown signs in as the " +
+      "set TATU_BOOTSTRAP_USERNAME and TATU_BOOTSTRAP_PASSWORD; teardown signs in as the " +
         "bootstrap account, exactly as the seed did",
     );
   }
@@ -513,12 +513,12 @@ async function step6Projects() {
  * volume.
  */
 async function step7Auth() {
-  const cli = process.env.TUCANO_UNSEED_AUTH_CMD;
+  const cli = process.env.TATU_UNSEED_AUTH_CMD;
   if (!cli) {
     for (const account of SEED_ACCOUNTS) {
       recordKept(
         `auth account ${accountUsername(account)} and its grants`,
-        "set TUCANO_UNSEED_AUTH_CMD to the server binary (e.g. `target/release/tucano-test " +
+        "set TATU_UNSEED_AUTH_CMD to the server binary (e.g. `target/release/tatu-test " +
           "unseed-auth`) to remove it; the API publishes no route for accounts or grants",
       );
     }
@@ -540,7 +540,7 @@ async function step7Auth() {
  */
 async function runAuthCommand(what, cli, args) {
   const { spawnSync } = await import("node:child_process");
-  // `TUCANO_UNSEED_AUTH_CMD` is a command *line* (it may carry its own
+  // `TATU_UNSEED_AUTH_CMD` is a command *line* (it may carry its own
   // `VAR=value` prefix), so it goes to a shell. Everything the script adds is
   // quoted: an account name is operator input and may contain anything.
   const quoted = args

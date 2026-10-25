@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Cleanup script for Tucano Test API.
+ * Cleanup script for TatuTest API.
  *
  * Wipes every milestone, test run, test suite, project and test case the API
  * lists, and the attachments stored inside them.
@@ -25,7 +25,7 @@
 const candidateUrls = [
   process.argv[2],
   process.env.API_URL,
-  process.env.TUCANO_API_URL,
+  process.env.TATU_API_URL,
   'http://localhost:3100',
   'http://localhost:8080/api',
   'http://localhost:3000',
@@ -48,7 +48,7 @@ async function resolveBaseUrl() {
 
 async function runClear() {
   const baseUrl = await resolveBaseUrl();
-  console.log(`\n🧹 Clearing test data from Tucano Test API at: ${baseUrl}\n`);
+  console.log(`\n🧹 Clearing test data from TatuTest API at: ${baseUrl}\n`);
 
   async function api(path, options = {}) {
     const res = await fetch(`${baseUrl}${path}`, {
